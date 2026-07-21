@@ -29,7 +29,7 @@ export default function SuperpositionShowcase() {
   const didDragRef = useRef(false);
   const lastMouseRef = useRef({ x: 0, y: 0 });
   const cameraAngleRef = useRef({ theta: Math.PI / 4, phi: Math.PI / 6 });
-  const cameraDistance = 6;
+  const cameraDistance = 9;
 
   // ── Setup Three.js scene ──────────────────────────────────────
   useEffect(() => {
