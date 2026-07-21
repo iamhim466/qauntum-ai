@@ -3,6 +3,9 @@ import Link from "next/link";
 import { topics, getTopicBySlug } from "@/lib/topics";
 import { ArrowLeft, ArrowRight, BookOpen, Lightbulb, Zap } from "lucide-react";
 import TopicSimulation from "@/components/TopicSimulation";
+import SuperpositionShowcase from "@/components/SuperpositionShowcase";
+import EntanglementShowcase from "@/components/EntanglementShowcase";
+import WaveParticleShowcase from "@/components/WaveParticleShowcase";
 
 // Generate static params for all topics
 export function generateStaticParams() {
@@ -143,6 +146,23 @@ export default async function TopicPage({
               Watch the simulation to visualize the quantum concept in action
             </p>
           </section>
+
+          {/* 3D Showcase - topic-specific */}
+          {slug === "superposition" && (
+            <section className="mb-20">
+              <SuperpositionShowcase />
+            </section>
+          )}
+          {slug === "quantum-entanglement" && (
+            <section className="mb-20">
+              <EntanglementShowcase />
+            </section>
+          )}
+          {slug === "wave-particle-duality" && (
+            <section className="mb-20">
+              <WaveParticleShowcase />
+            </section>
+          )}
 
           {/* Colored divider */}
           <div className="flex items-center gap-4 mb-16">

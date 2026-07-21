@@ -26,7 +26,7 @@ const coreTopics = [
   { slug: "schrodingers-cat", title: "Schrödinger's Cat", desc: "Thought experiment illustrating quantum superposition." },
 ];
 
-// ── Scroll Reveal Wrapper ──────────────────────────────────────
+// -- Scroll Reveal Wrapper ---------------------------------------
 
 function ScrollReveal({
   children,
@@ -54,7 +54,7 @@ function ScrollReveal({
   );
 }
 
-// ── Stagger Container ──────────────────────────────────────────
+// -- Stagger Container -------------------------------------------
 
 function StaggerContainer({
   children,
@@ -88,7 +88,7 @@ const cardVariant = {
   },
 };
 
-// ── Main Page ──────────────────────────────────────────────────
+// -- Main Page ---------------------------------------------------
 
 export default function Home() {
   const [headerScrolled, setHeaderScrolled] = useState(false);
@@ -113,7 +113,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* ── Parallax Background Canvas ────────────────────────── */}
+      {/* -- Parallax Background Canvas -------------------------------- */}
       <motion.div
         className="fixed inset-0 z-0"
         style={{ y: bgY }}
@@ -121,7 +121,7 @@ export default function Home() {
         <QuantumBackground />
       </motion.div>
 
-      {/* ── Dynamic Shrinking Navigation Bar ──────────────────── */}
+      {/* -- Dynamic Shrinking Navigation Bar -------------------------- */}
       <motion.header
         initial={{ y: -40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -204,7 +204,7 @@ export default function Home() {
         />
       </motion.header>
 
-      {/* ── Content Sections ──────────────────────────────────── */}
+      {/* -- Content Sections ----------------------------------------- */}
       <div className="relative z-10">
         {/* Hero Section with Parallax */}
         <section className="relative h-screen overflow-hidden flex flex-col items-center justify-center">
@@ -236,7 +236,7 @@ export default function Home() {
               interactive lessons, simulations, and AI-powered explanations.
             </motion.p>
 
-            {/* ── Start Learning Button with layoutId ──────────── */}
+            {/* -- Start Learning Button with layoutId -------------------- */}
             <motion.div
               className="mt-8"
               initial={{ opacity: 0, y: 20 }}
@@ -278,7 +278,7 @@ export default function Home() {
           </motion.div>
         </section>
 
-        {/* ── Gemini Section ────────────────────────────────────── */}
+        {/* -- Gemini Section ----------------------------------------- */}
         <section className="relative py-32 px-12">
           <div className="max-w-6xl mx-auto">
             <ScrollReveal>
@@ -310,7 +310,7 @@ export default function Home() {
                 },
                 {
                   title: "Learn at Your Pace",
-                  desc: "From beginner to advanced — explanations adapt to your understanding.",
+                  desc: "From beginner to advanced - explanations adapt to your understanding.",
                   icon: "📈",
                 },
               ].map((item) => (
@@ -338,7 +338,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── Main Topics Section ───────────────────────────────── */}
+        {/* -- Main Topics Section ------------------------------------ */}
         <section className="relative py-32 px-12 bg-black/50 backdrop-blur-sm">
           <div className="max-w-6xl mx-auto">
             <ScrollReveal>
@@ -405,7 +405,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── About Section ─────────────────────────────────────── */}
+        {/* -- About Section ----------------------------------------- */}
         <section className="relative py-32 px-12">
           <div className="max-w-4xl mx-auto text-center">
             <ScrollReveal>
@@ -445,7 +445,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── Footer ────────────────────────────────────────────── */}
+        {/* -- Footer ------------------------------------------------ */}
         <footer className="relative py-8 px-12 border-t border-white/10">
           <div className="max-w-6xl mx-auto flex justify-between items-center">
             <p
@@ -470,7 +470,7 @@ export default function Home() {
         </footer>
       </div>
 
-      {/* ── Full-Screen Expansion Overlay ──────────────────────── */}
+      {/* -- Full-Screen Expansion Overlay ------------------------- */}
       <AnimatePresence>
         {isExpanded && (
           <motion.div
@@ -545,7 +545,7 @@ export default function Home() {
                     Your journey into quantum physics begins now. Choose a path below to start exploring the fundamental mysteries of the universe.
                   </motion.p>
 
-                  {/* ── Core Topics Section (Top) ──────────────── */}
+                  {/* -- Core Topics Section (Top) ---------------------------- */}
                   <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -601,7 +601,7 @@ export default function Home() {
                     </div>
                   </motion.div>
 
-                  {/* ── AI Feature Cards (Bottom) ────────────── */}
+                  {/* -- AI Feature Cards (Bottom) ---------------------------- */}
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
