@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { topics, getTopicBySlug } from "@/lib/topics";
-import { ArrowLeft, ArrowRight, BookOpen, Lightbulb, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, Lightbulb, Zap, BookOpen, Atom } from "lucide-react";
 import TopicSimulation from "@/components/TopicSimulation";
 import SuperpositionShowcase from "@/components/SuperpositionShowcase";
 import EntanglementShowcase from "@/components/EntanglementShowcase";
@@ -12,6 +12,8 @@ import ObserverEffectShowcase from "@/components/ObserverEffectShowcase";
 import WaveFunctionShowcase from "@/components/WaveFunctionShowcase";
 import SchrodingerCatShowcase from "@/components/SchrodingerCatShowcase";
 import QuantumToolsShowcase from "@/components/QuantumToolsShowcase";
+import TopicHero from "@/components/TopicHero";
+import TopicSection from "@/components/TopicSection";
 
 // Generate static params for all topics
 export function generateStaticParams() {
@@ -85,24 +87,17 @@ export default async function TopicPage({
 
       {/* Main Content */}
       <main className="relative z-10 pt-24 pb-32 px-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           {/* Hero Section */}
-          <section className="text-center mb-20">
-            <div className="mb-8">
-              <span className="text-8xl block mb-6">{topic.icon}</span>
-              <h2
-                className="text-5xl md:text-6xl font-bold mb-4"
-                style={{ fontFamily: "var(--font-playfair)", color: topic.accentColor }}
-              >
-                {topic.title}
-              </h2>
-              <p
-                className="text-xl text-gray-400 max-w-2xl mx-auto"
-                style={{ fontFamily: "var(--font-dm-sans)" }}
-              >
-                {topic.shortDesc}
-              </p>
-            </div>
+          <section className="text-center mb-24">
+            <TopicHero
+              slug={slug}
+              icon={topic.icon}
+              title={topic.title}
+              shortDesc={topic.shortDesc}
+              accentColor={topic.accentColor}
+              colorRgb={topic.colorRgb}
+            />
 
             {/* Key Concept Card */}
             <div
@@ -133,118 +128,79 @@ export default async function TopicPage({
             </div>
           </section>
 
-          {/* Interactive Simulation */}
-          <section className="mb-20">
-            <div className="flex items-center gap-3 mb-6">
-              <Lightbulb className="w-6 h-6" style={{ color: topic.accentColor }} />
-              <h3
-                className="text-2xl font-bold"
-                style={{ fontFamily: "var(--font-playfair)", color: topic.accentColor }}
-              >
-                Interactive Simulation
-              </h3>
-            </div>
-            <TopicSimulation slug={slug} color={topic.color} colorRgb={topic.colorRgb} />
-            <p
-              className="text-sm text-gray-500 mt-3 text-center"
-              style={{ fontFamily: "var(--font-dm-sans)" }}
-            >
-              Watch the simulation to visualize the quantum concept in action
-            </p>
-          </section>
+          {/* Section 1: What is X? — 2D Simulation + Text */}
+          <TopicSection
+            index={0}
+            heading={topic.sections[0].heading}
+            content={topic.sections[0].content}
+            icon={<Lightbulb className="w-5 h-5" style={{ color: topic.accentColor }} />}
+            accentColor={topic.accentColor}
+            colorRgb={topic.colorRgb}
+            interactive={
+              <TopicSimulation slug={slug} color={topic.color} colorRgb={topic.colorRgb} />
+            }
+          />
 
-          {/* 3D Showcase - topic-specific */}
-          {slug === "superposition" && (
-            <section className="mb-20">
-              <SuperpositionShowcase />
-            </section>
-          )}
-          {slug === "quantum-entanglement" && (
-            <section className="mb-20">
-              <EntanglementShowcase />
-            </section>
-          )}
-          {slug === "wave-particle-duality" && (
-            <section className="mb-20">
-              <WaveParticleShowcase />
-            </section>
-          )}
-          {slug === "quantum-computing" && (
-            <section className="mb-20">
-              <QuantumComputingShowcase />
-            </section>
-          )}
-          {slug === "quantum-tunneling" && (
-            <section className="mb-20">
-              <QuantumTunnelingShowcase />
-            </section>
-          )}
-          {slug === "observer-effect" && (
-            <section className="mb-20">
-              <ObserverEffectShowcase />
-            </section>
-          )}
-          {slug === "wave-function" && (
-            <section className="mb-20">
-              <WaveFunctionShowcase />
-            </section>
-          )}
-          {slug === "schrodingers-cat" && (
-            <section className="mb-20">
-              <SchrodingerCatShowcase />
-            </section>
-          )}
-          {slug === "quantum-tools" && (
-            <section className="mb-20">
-              <QuantumToolsShowcase />
-            </section>
-          )}
-
-          {/* Colored divider */}
-          <div className="flex items-center gap-4 mb-16">
-            <div className="flex-1 h-px" style={{ backgroundColor: `rgba(${topic.colorRgb},0.3)` }} />
-            <BookOpen className="w-5 h-5" style={{ color: topic.accentColor }} />
-            <div className="flex-1 h-px" style={{ backgroundColor: `rgba(${topic.colorRgb},0.3)` }} />
-          </div>
-
-          {/* Content Sections */}
-          <section className="space-y-8 mb-20">
-            {topic.sections.map((section, index) => (
-              <div
-                key={index}
-                className="relative p-8 rounded-2xl border backdrop-blur-sm scroll-mt-24"
-                style={{
-                  backgroundColor: `rgba(${topic.colorRgb},${0.05 + index * 0.02})`,
-                  borderColor: `rgba(${topic.colorRgb},0.2)`,
-                }}
-              >
-                {/* Section number */}
-                <div
-                  className="absolute -top-4 left-8 px-3 py-1 rounded-full text-xs font-bold"
-                  style={{
-                    backgroundColor: topic.color,
-                    color: "white",
-                    fontFamily: "var(--font-dm-sans)",
-                  }}
-                >
-                  {String(index + 1).padStart(2, "0")}
-                </div>
-
-                <h3
-                  className="text-2xl font-bold mb-4 mt-2"
-                  style={{ fontFamily: "var(--font-playfair)", color: topic.accentColor }}
-                >
-                  {section.heading}
-                </h3>
-                <p
-                  className="text-gray-300 leading-relaxed text-lg"
-                  style={{ fontFamily: "var(--font-dm-sans)" }}
-                >
-                  {section.content}
-                </p>
+          {/* Section 2: How does it work? — 3D Showcase + Text */}
+          <TopicSection
+            index={1}
+            heading={topic.sections[1].heading}
+            content={topic.sections[1].content}
+            icon={<Atom className="w-5 h-5" style={{ color: topic.accentColor }} />}
+            accentColor={topic.accentColor}
+            colorRgb={topic.colorRgb}
+            reversed
+            interactive={
+              <div className="rounded-2xl overflow-hidden border border-white/10 h-96 bg-black/30">
+                {slug === "superposition" && <SuperpositionShowcase />}
+                {slug === "quantum-entanglement" && <EntanglementShowcase />}
+                {slug === "wave-particle-duality" && <WaveParticleShowcase />}
+                {slug === "quantum-computing" && <QuantumComputingShowcase />}
+                {slug === "quantum-tunneling" && <QuantumTunnelingShowcase />}
+                {slug === "observer-effect" && <ObserverEffectShowcase />}
+                {slug === "wave-function" && <WaveFunctionShowcase />}
+                {slug === "schrodingers-cat" && <SchrodingerCatShowcase />}
+                {slug === "quantum-tools" && <QuantumToolsShowcase />}
               </div>
-            ))}
-          </section>
+            }
+          />
+
+          {/* Section 3: Real-world examples — 3D Showcase + Text */}
+          <TopicSection
+            index={2}
+            heading={topic.sections[2].heading}
+            content={topic.sections[2].content}
+            icon={<BookOpen className="w-5 h-5" style={{ color: topic.accentColor }} />}
+            accentColor={topic.accentColor}
+            colorRgb={topic.colorRgb}
+            interactive={
+              <div className="rounded-2xl overflow-hidden border border-white/10 h-96 bg-black/30">
+                {slug === "superposition" && <SuperpositionShowcase />}
+                {slug === "quantum-entanglement" && <EntanglementShowcase />}
+                {slug === "wave-particle-duality" && <WaveParticleShowcase />}
+                {slug === "quantum-computing" && <QuantumComputingShowcase />}
+                {slug === "quantum-tunneling" && <QuantumTunnelingShowcase />}
+                {slug === "observer-effect" && <ObserverEffectShowcase />}
+                {slug === "wave-function" && <WaveFunctionShowcase />}
+                {slug === "schrodingers-cat" && <SchrodingerCatShowcase />}
+                {slug === "quantum-tools" && <QuantumToolsShowcase />}
+              </div>
+            }
+          />
+
+          {/* Section 4: Why it matters — 2D Simulation + Text */}
+          <TopicSection
+            index={3}
+            heading={topic.sections[3].heading}
+            content={topic.sections[3].content}
+            icon={<Zap className="w-5 h-5" style={{ color: topic.accentColor }} />}
+            accentColor={topic.accentColor}
+            colorRgb={topic.colorRgb}
+            reversed
+            interactive={
+              <TopicSimulation slug={slug} color={topic.color} colorRgb={topic.colorRgb} />
+            }
+          />
 
           {/* Navigation to next/prev topic */}
           <nav className="flex flex-col sm:flex-row gap-4 justify-between items-center pt-8 border-t" style={{ borderColor: `rgba(${topic.colorRgb},0.2)` }}>

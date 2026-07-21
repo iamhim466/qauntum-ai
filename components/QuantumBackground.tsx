@@ -28,11 +28,11 @@ const WAVE_THRESHOLD = 170;
 const OBSERVER_THRESHOLD = 180;
 const PARTICLE_MIN_R = 1.5;
 const PARTICLE_MAX_R = 4.5;
-const PARTICLE_COUNT_BASE = 300;
+const PARTICLE_COUNT_BASE = 180;
 const WAVE_AMPLITUDE = 2;
 const WAVE_K = 0.08;
 const WAVE_OMEGA = 0.04;
-const ENTANGLEMENT_INTERVAL = 2500;
+const ENTANGLEMENT_INTERVAL = 4000;
 const ENTANGLEMENT_DECAY_SPEED = 0.012;
 const BREATH_CYCLE_SEC = 34;
 const GRID_CELL_SIZE = WAVE_THRESHOLD; // Spatial hash cell size
@@ -111,9 +111,14 @@ export default function QuantumBackground() {
   const rafRef = useRef<number>(0);
   const lastEntanglementRef = useRef(0);
 
+  const visibleRef = useRef(true);
+
   const animate = useCallback((timestamp: number) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !visibleRef.current) {
+      rafRef.current = requestAnimationFrame(animate);
+      return;
+    }
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
@@ -214,25 +219,16 @@ export default function QuantumBackground() {
       if (p.y < 0) { p.y = 0; p.vy = Math.abs(p.vy); }
       else if (p.y > cH) { p.y = cH; p.vy = -Math.abs(p.vy); }
 
-      // Subtle glow for visibility
-      ctx.shadowBlur = 4;
-      ctx.shadowColor = p.color;
-
-      // Core dot
+      // Core dot (no shadow — too expensive)
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       ctx.fillStyle = p.color;
       ctx.fill();
-
-      // Reset shadow for next draws
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = "transparent";
     }
 
-    // ── Visible connecting lines (spatial grid optimized) ────
+    // ── Visible connecting lines (simplified for performance) ──
     ctx.lineWidth = 0.75;
     const time = timestamp * 0.001;
-    const drawnPairs = new Set<string>();
 
     for (let i = 0; i < particles.length; i++) {
       const pA = particles[i];
@@ -240,45 +236,19 @@ export default function QuantumBackground() {
 
       for (let n = 0; n < neighbors.length; n++) {
         const j = neighbors[n];
-        if (j <= i) continue; // avoid duplicates
-
-        const pairKey = i < j ? `${i},${j}` : `${j},${i}`;
-        if (drawnPairs.has(pairKey)) continue;
-        drawnPairs.add(pairKey);
+        if (j <= i) continue;
 
         const pB = particles[j];
-        const d = distance(pA, pB);
+        const dx = pB.x - pA.x;
+        const dy = pB.y - pA.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
         if (d > WAVE_THRESHOLD) continue;
 
-        const alpha = (1 - d / WAVE_THRESHOLD) * 0.25;
+        const alpha = (1 - d / WAVE_THRESHOLD) * 0.2;
         ctx.strokeStyle = `rgba(0,243,255,${alpha})`;
         ctx.beginPath();
-
-        const ax = pA.x;
-        const ay = pA.y;
-        const bx = pB.x;
-        const by = pB.y;
-
-        const dx = bx - ax;
-        const dy = by - ay;
-        const len = Math.sqrt(dx * dx + dy * dy) || 1;
-        const nx = -dy / len;
-        const ny = dx / len;
-
-        const segments = 10;
-        for (let s = 0; s <= segments; s++) {
-          const t = s / segments;
-          const lx = ax + dx * t;
-          const ly = ay + dy * t;
-
-          const waveOffset =
-            Math.sin(WAVE_K * t * d - WAVE_OMEGA * time) * WAVE_AMPLITUDE;
-          const px = lx + nx * waveOffset;
-          const py = ly + ny * waveOffset;
-
-          if (s === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
+        ctx.moveTo(pA.x, pA.y);
+        ctx.lineTo(pB.x, pB.y);
         ctx.stroke();
       }
     }
@@ -301,17 +271,12 @@ export default function QuantumBackground() {
       const intensity = Math.sin(e.progress * Math.PI);
       const alpha = intensity * 0.7;
 
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1.5;
       ctx.strokeStyle = `rgba(168,85,247,${alpha})`;
-      ctx.shadowBlur = 6;
-      ctx.shadowColor = `rgba(168,85,247,${alpha})`;
       ctx.beginPath();
       ctx.moveTo(ptA.x, ptA.y);
       ctx.lineTo(ptB.x, ptB.y);
       ctx.stroke();
-
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = "transparent";
     }
 
     rafRef.current = requestAnimationFrame(animate);
@@ -368,8 +333,18 @@ export default function QuantumBackground() {
 
     rafRef.current = requestAnimationFrame(animate);
 
+    // Pause animation when off-screen
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        visibleRef.current = entry.isIntersecting;
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(canvas);
+
     return () => {
       cancelAnimationFrame(rafRef.current);
+      observer.disconnect();
       window.removeEventListener("resize", resize);
       canvas.removeEventListener("mousemove", onMouseMove);
       canvas.removeEventListener("mouseleave", onMouseLeave);

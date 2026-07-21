@@ -28,9 +28,6 @@ function drawSuperposition(
     ctx.beginPath();
     ctx.strokeStyle = `rgba(${colorRgb},${alpha})`;
     ctx.lineWidth = 3;
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = `rgba(${colorRgb},0.5)`;
-
     for (let x = 0; x < w; x++) {
       const y =
         h / 2 +
@@ -40,7 +37,6 @@ function drawSuperposition(
       else ctx.lineTo(x, y);
     }
     ctx.stroke();
-    ctx.shadowBlur = 0;
   }
 
   // Measurement point
@@ -106,10 +102,7 @@ function drawEntanglement(
     ctx.beginPath();
     ctx.arc(px, py, 14, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(${colorRgb},0.8)`;
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = `rgba(${colorRgb},0.6)`;
     ctx.fill();
-    ctx.shadowBlur = 0;
 
     // Glow ring
     ctx.beginPath();
@@ -180,12 +173,8 @@ function drawWaveParticle(
   // Incoming particle
   const particleX = (time * 60) % (slitX - 20);
   ctx.beginPath();
-  ctx.arc(particleX, h / 2, 5, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = `rgba(${colorRgb},0.8)`;
-  ctx.fill();
-  ctx.shadowBlur = 0;
+  ctx.arc(particleX, h / 2, 5, 0, Math.PI * 2);    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fill();
 }
 
 // ── Simulation: Quantum Computing (qubit Bloch sphere) ─────────
@@ -240,10 +229,7 @@ function drawQuantumComputing(
   ctx.lineTo(cx + qx, cy + qy);
   ctx.strokeStyle = `rgba(255,255,255,0.8)`;
   ctx.lineWidth = 3;
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = `rgba(${colorRgb},0.6)`;
   ctx.stroke();
-  ctx.shadowBlur = 0;
 
   // Qubit point
   ctx.beginPath();
@@ -321,12 +307,8 @@ function drawTunneling(
   const particlePhase = (time * 3) % (w * 0.04);
   const particleX = (particlePhase / (w * 0.04)) * w;
   ctx.beginPath();
-  ctx.arc(particleX, cy, 6, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = `rgba(255,255,255,0.5)`;
-  ctx.fill();
-  ctx.shadowBlur = 0;
+  ctx.arc(particleX, cy, 6, 0, Math.PI * 2);    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fill();
 
   // Labels
   ctx.fillStyle = `rgba(255,255,255,0.5)`;
@@ -373,10 +355,7 @@ function drawObserverEffect(
     ctx.beginPath();
     ctx.arc(w / 2, cy, 15 * appearProgress, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(${colorRgb},${0.9 * appearProgress})`;
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = `rgba(${colorRgb},0.6)`;
     ctx.fill();
-    ctx.shadowBlur = 0;
 
     // Measurement flash
     ctx.beginPath();
@@ -608,12 +587,9 @@ function drawSchrodingersCat(
   ctx.fillText("Box Sealed — Superposition Active", cx, boxY - 15);
 
   // Glow effect around box
-  ctx.shadowBlur = 30;
-  ctx.shadowColor = `rgba(${colorRgb},${0.2 * pulse})`;
   ctx.strokeStyle = `rgba(${colorRgb},${0.1 * pulse})`;
   ctx.lineWidth = 1;
   ctx.strokeRect(boxX - 5, boxY - 5, boxSize + 10, boxSize + 10);
-  ctx.shadowBlur = 0;
 }
 
 // ── Main Component ─────────────────────────────────────────────
@@ -643,10 +619,15 @@ export default function TopicSimulation({ slug, color, colorRgb }: TopicSimulati
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
 
+  const visibleRef = useRef(true);
+
   const draw = useCallback(
     (timestamp: number) => {
       const canvas = canvasRef.current;
-      if (!canvas) return;
+      if (!canvas || !visibleRef.current) {
+        rafRef.current = requestAnimationFrame(draw);
+        return;
+      }
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
@@ -675,7 +656,19 @@ export default function TopicSimulation({ slug, color, colorRgb }: TopicSimulati
 
   useEffect(() => {
     rafRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(rafRef.current);
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        visibleRef.current = entry.isIntersecting;
+      },
+      { threshold: 0.1 }
+    );
+    if (canvasRef.current) observer.observe(canvasRef.current);
+
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      observer.disconnect();
+    };
   }, [draw]);
 
   return (

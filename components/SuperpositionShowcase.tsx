@@ -322,6 +322,8 @@ export default function SuperpositionShowcase() {
     };
   }, []);
 
+  const visibleRef = useRef(true);
+
   // ── Animation loop ──────────────────────────────────────────
   useEffect(() => {
     const animate = () => {
@@ -329,6 +331,10 @@ export default function SuperpositionShowcase() {
       const camera = cameraRef.current;
       const renderer = rendererRef.current;
       if (!scene || !camera || !renderer) {
+        rafRef.current = requestAnimationFrame(animate);
+        return;
+      }
+      if (!visibleRef.current) {
         rafRef.current = requestAnimationFrame(animate);
         return;
       }
@@ -550,11 +556,21 @@ export default function SuperpositionShowcase() {
     };
 
     rafRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(rafRef.current);
+
+    const observer = new IntersectionObserver(
+      ([entry]) => { visibleRef.current = entry.isIntersecting; },
+      { threshold: 0.1 }
+    );
+    if (containerRef.current) observer.observe(containerRef.current);
+
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      observer.disconnect();
+    };
   }, []);
 
   return (
-    <div className="relative w-full h-[70vh] min-h-[500px] rounded-3xl overflow-hidden bg-black/40 border border-purple-500/20">
+    <div className="relative w-full h-[70vh] min-h-[500px] rounded-3xl overflow-hidden bg-black/40 border border-purple-500/20" style={{ contain: "layout style paint" }}>
       <div ref={containerRef} className="w-full h-full" />
       {/* Subtle click hint */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-black/50 border border-purple-500/30 text-purple-300/60 text-sm pointer-events-none select-none">

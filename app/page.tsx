@@ -88,6 +88,17 @@ const cardVariant = {
   },
 };
 
+// -- Overlay Card Variant (staggered entrance) -------------------
+
+const overlayCardVariant = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring" as const, stiffness: 260, damping: 20 },
+  },
+};
+
 // -- Main Page ---------------------------------------------------
 
 export default function Home() {
@@ -121,12 +132,12 @@ export default function Home() {
         <QuantumBackground />
       </motion.div>
 
-      {/* -- Glassmorphism Navbar with Neon Cyan Glow --------------- */}
-      <motion.header
+      {/* -- Glassmorphism Navbar with Neon Cyan Glow --------------- */}        <motion.header
         initial={{ y: -60, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+        animate={{ y: 0, opacity: isExpanded ? 0 : 1 }}
+        transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
         className="fixed top-0 left-0 right-0 z-50 px-6 pt-4"
+        style={{ pointerEvents: isExpanded ? "none" : "auto" }}
       >
         <div
           className={`mx-auto max-w-6xl flex justify-between items-center transition-all duration-500 ease-in-out rounded-2xl ${
@@ -220,6 +231,10 @@ export default function Home() {
         <section className="relative h-screen overflow-hidden flex flex-col items-center justify-center">
           {/* Hero content with parallax fade + float */}
           <motion.div
+            animate={{ opacity: isExpanded ? 0 : 1 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+          >
+          <motion.div
             className="relative z-10 flex flex-col items-center text-center px-6"
             style={{ opacity: heroOpacity, y: heroY }}
           >
@@ -262,9 +277,14 @@ export default function Home() {
                 Start Learning
               </motion.button>
             </motion.div>
+            </motion.div>
           </motion.div>
 
           {/* Scroll Down Indicator */}
+          <motion.div
+            animate={{ opacity: isExpanded ? 0 : 1 }}
+            transition={{ duration: 0.3 }}
+          >
           <motion.div
             className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
             style={{ opacity: scrollIndicatorOpacity, scale: scrollIndicatorScale }}
@@ -284,6 +304,7 @@ export default function Home() {
               }}
             >
               <ChevronDown className="w-6 h-6 text-purple-400" />
+            </motion.div>
             </motion.div>
           </motion.div>
         </section>
@@ -485,8 +506,7 @@ export default function Home() {
         {isExpanded && (
           <motion.div
             layoutId="hero-expansion"
-            className="fixed inset-0 z-[100] flex flex-col overflow-y-auto"
-            style={{ backgroundColor: "#a855f7" }}
+            className="fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-gradient-to-br from-purple-950 via-fuchsia-950/60 to-slate-950"
             initial={{ borderRadius: "9999px", opacity: 0.8 }}
             animate={{
               borderRadius: "0px",
@@ -499,6 +519,17 @@ export default function Home() {
               transition: { duration: 0.4, ease: [0.55, 0, 1, 0.45] },
             }}
           >
+            {/* Ambient Background Pulse */}
+            <motion.div
+              className="absolute inset-0 z-0 pointer-events-none"
+              animate={{ opacity: [0.4, 0.8, 0.4] }}
+              transition={{ duration: 8, ease: "easeInOut", repeat: Infinity }}
+              style={{
+                background:
+                  "radial-gradient(ellipse at 50% 30%, rgba(168,85,247,0.35) 0%, transparent 55%), radial-gradient(ellipse at 80% 70%, rgba(217,70,239,0.2) 0%, transparent 50%), radial-gradient(ellipse at 20% 80%, rgba(99,102,241,0.15) 0%, transparent 45%)",
+              }}
+            />
+
             {/* Close Button */}
             <motion.button
               initial={{ opacity: 0, scale: 0.5 }}
@@ -574,41 +605,48 @@ export default function Home() {
                     </div>
 
                     {/* Topics Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {coreTopics.map((topic, i) => (
+                    <motion.div
+                      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                      initial="hidden"
+                      animate="visible"
+                      variants={{
+                        visible: { transition: { staggerChildren: 0.05 } },
+                      }}
+                    >
+                      {coreTopics.map((topic) => (
                         <Link key={topic.slug} href={`/topics/${topic.slug}`} className="block">
                           <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 1.7 + i * 0.08, duration: 0.4 }}
+                            layoutId={`topic-card-${topic.slug}`}
+                            variants={overlayCardVariant}
                             whileHover={{
-                              scale: 1.03,
-                              y: -4,
-                              boxShadow: "0px 10px 25px rgba(34, 211, 238, 0.2)",
+                              y: -5,
+                              boxShadow: "0 0 25px rgba(34,211,238,0.2)",
+                              borderColor: "rgba(34,211,238,0.5)",
                             }}
                             whileTap={{ scale: 0.98 }}
-                            className="bg-purple-900/30 border border-purple-500/30 rounded-2xl p-6 backdrop-blur-md hover:border-cyan-400 transition-colors cursor-pointer group text-left"
+                            transition={{ duration: 0.2 }}
+                            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 cursor-pointer group text-left"
                           >
                             <h4
-                              className="text-lg font-semibold text-white mb-2 group-hover:text-cyan-300 transition-colors"
+                              className="text-lg font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors duration-200"
                               style={{ fontFamily: "var(--font-playfair)" }}
                             >
                               {topic.title}
                             </h4>
                             <p
-                              className="text-white/60 text-sm mb-4 leading-relaxed"
+                              className="text-slate-300 text-sm mb-4 leading-relaxed"
                               style={{ fontFamily: "var(--font-dm-sans)" }}
                             >
                               {topic.desc}
                             </p>
-                            <div className="flex items-center gap-1 text-cyan-400 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-1 text-cyan-400 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                               Learn More
                               <ArrowRight className="w-4 h-4" />
                             </div>
                           </motion.div>
                         </Link>
                       ))}
-                    </div>
+                    </motion.div>
                   </motion.div>
 
                   {/* -- AI Feature Cards (Bottom) ---------------------------- */}
