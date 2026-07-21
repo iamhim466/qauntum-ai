@@ -121,43 +121,59 @@ export default function Home() {
         <QuantumBackground />
       </motion.div>
 
-      {/* -- Dynamic Shrinking Navigation Bar -------------------------- */}
+      {/* -- Glassmorphism Navbar with Neon Cyan Glow --------------- */}
       <motion.header
-        initial={{ y: -40, opacity: 0 }}
+        initial={{ y: -60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out ${
-          headerScrolled
-            ? "bg-black/70 backdrop-blur-md shadow-lg border-b border-purple-500/20"
-            : "bg-transparent"
-        }`}
+        transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="fixed top-0 left-0 right-0 z-50 px-6 pt-4"
       >
         <div
-          className={`w-full px-12 flex justify-between items-baseline transition-all duration-300 ease-in-out ${
+          className={`mx-auto max-w-6xl flex justify-between items-center transition-all duration-500 ease-in-out rounded-2xl ${
             headerScrolled
-              ? "pt-4 pb-3"
-              : "pt-8 pb-4"
+              ? "px-8 py-3"
+              : "px-8 py-4"
           }`}
+          style={{
+            background: "rgba(0, 20, 30, 0.45)",
+            backdropFilter: "blur(20px) saturate(180%)",
+            WebkitBackdropFilter: "blur(20px) saturate(180%)",
+            border: "1px solid rgba(34, 211, 238, 0.25)",
+            boxShadow: [
+              "0 0 15px rgba(34, 211, 238, 0.15)",
+              "0 0 30px rgba(34, 211, 238, 0.08)",
+              "inset 0 1px 0 rgba(34, 211, 238, 0.1)",
+              headerScrolled ? "0 8px 32px rgba(0,0,0,0.3)" : "0 4px 24px rgba(0,0,0,0.2)",
+            ].join(", "),
+          }}
         >
           {/* Logo Group - Left */}
           <div className="flex items-baseline">
             <span
-              className={`font-extrabold tracking-tight transition-all duration-300 ease-in-out ${
+              className={`font-extrabold tracking-tight transition-all duration-500 ease-in-out ${
                 headerScrolled
-                  ? "text-3xl"
-                  : "text-4xl"
+                  ? "text-xl"
+                  : "text-2xl"
               }`}
-              style={{ fontFamily: "var(--font-playfair)" }}
+              style={{
+                fontFamily: "var(--font-playfair)",
+                color: "white",
+                textShadow: "0 0 20px rgba(34, 211, 238, 0.3)",
+              }}
             >
               Quantum
             </span>
             <span
-              className={`whitespace-nowrap font-bold tracking-normal text-purple-500 ml-3 transition-all duration-300 ease-in-out ${
+              className={`whitespace-nowrap font-bold tracking-normal ml-2 transition-all duration-500 ease-in-out ${
                 headerScrolled
-                  ? "text-2xl"
-                  : "text-3xl"
+                  ? "text-lg"
+                  : "text-xl"
               }`}
-              style={{ fontFamily: "var(--font-great-vibes)" }}
+              style={{
+                fontFamily: "var(--font-great-vibes)",
+                color: "#a855f7",
+                textShadow: "0 0 16px rgba(168, 85, 247, 0.5)",
+              }}
             >
               The Easy Way
             </span>
@@ -165,41 +181,35 @@ export default function Home() {
 
           {/* Navigation - Right */}
           <nav
-            className="flex gap-6 text-lg items-center whitespace-nowrap mr-10"
+            className="flex gap-1 items-center whitespace-nowrap"
             style={{ fontFamily: "var(--font-dm-sans)" }}
           >
             {navLinks.map((link) => (
               <a
                 key={link}
                 href="#"
-                className="relative group transition-colors hover:text-purple-400"
+                className="relative px-4 py-2 text-sm font-medium text-white/70 rounded-full transition-all duration-300 hover:text-white hover:bg-white/10"
               >
                 {link}
-                <span className="absolute bottom-[-3px] left-[-6px] right-[-6px] h-[1px] bg-purple-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
               </a>
             ))}
           </nav>
         </div>
 
-        {/* Neon cyan divider with animated pulsing glow */}
+        {/* Animated neon cyan glow bar underneath the pill */}
         <motion.div
-          className="h-[1px] bg-cyan-400 w-full"
-          style={{
-            boxShadow:
-              "0 0 40px rgba(34,211,238,0.7), 0 0 20px rgba(34,211,238,0.4), 0 0 8px rgba(34,211,238,0.3)",
-          }}
+          className="mx-auto max-w-6xl h-[1px] mt-1 rounded-full overflow-hidden"
           animate={{
-            opacity: [0.7, 1, 0.7],
-            boxShadow: [
-              "0 0 40px rgba(34,211,238,0.7), 0 0 20px rgba(34,211,238,0.4), 0 0 8px rgba(34,211,238,0.3)",
-              "0 0 60px rgba(34,211,238,0.9), 0 0 30px rgba(34,211,238,0.6), 0 0 12px rgba(34,211,238,0.4)",
-              "0 0 40px rgba(34,211,238,0.7), 0 0 20px rgba(34,211,238,0.4), 0 0 8px rgba(34,211,238,0.3)",
-            ],
+            opacity: [0.5, 1, 0.5],
           }}
           transition={{
             duration: 2.5,
             ease: "easeInOut",
             repeat: Infinity,
+          }}
+          style={{
+            background: "linear-gradient(90deg, transparent 0%, #22d3ee 30%, #67e8f9 50%, #22d3ee 70%, transparent 100%)",
+            boxShadow: "0 0 20px rgba(34,211,238,0.5), 0 0 40px rgba(34,211,238,0.2)",
           }}
         />
       </motion.header>

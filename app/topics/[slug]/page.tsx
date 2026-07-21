@@ -6,6 +6,12 @@ import TopicSimulation from "@/components/TopicSimulation";
 import SuperpositionShowcase from "@/components/SuperpositionShowcase";
 import EntanglementShowcase from "@/components/EntanglementShowcase";
 import WaveParticleShowcase from "@/components/WaveParticleShowcase";
+import QuantumComputingShowcase from "@/components/QuantumComputingShowcase";
+import QuantumTunnelingShowcase from "@/components/QuantumTunnelingShowcase";
+import ObserverEffectShowcase from "@/components/ObserverEffectShowcase";
+import WaveFunctionShowcase from "@/components/WaveFunctionShowcase";
+import SchrodingerCatShowcase from "@/components/SchrodingerCatShowcase";
+import QuantumToolsShowcase from "@/components/QuantumToolsShowcase";
 
 // Generate static params for all topics
 export function generateStaticParams() {
@@ -161,6 +167,36 @@ export default async function TopicPage({
           {slug === "wave-particle-duality" && (
             <section className="mb-20">
               <WaveParticleShowcase />
+            </section>
+          )}
+          {slug === "quantum-computing" && (
+            <section className="mb-20">
+              <QuantumComputingShowcase />
+            </section>
+          )}
+          {slug === "quantum-tunneling" && (
+            <section className="mb-20">
+              <QuantumTunnelingShowcase />
+            </section>
+          )}
+          {slug === "observer-effect" && (
+            <section className="mb-20">
+              <ObserverEffectShowcase />
+            </section>
+          )}
+          {slug === "wave-function" && (
+            <section className="mb-20">
+              <WaveFunctionShowcase />
+            </section>
+          )}
+          {slug === "schrodingers-cat" && (
+            <section className="mb-20">
+              <SchrodingerCatShowcase />
+            </section>
+          )}
+          {slug === "quantum-tools" && (
+            <section className="mb-20">
+              <QuantumToolsShowcase />
             </section>
           )}
 
