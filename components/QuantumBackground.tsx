@@ -25,17 +25,17 @@ interface Entanglement {
 
 const COLORS = ["#a855f7", "#00f3ff", "#ffffff"] as const;
 const WAVE_THRESHOLD = 170;
-const OBSERVER_THRESHOLD = 180;
+const OBSERVER_THRESHOLD = 220;
+const MOUSE_ATTRACT_RADIUS = 250;
+const MOUSE_ATTRACT_STRENGTH = 0.035;
+const MOUSE_GLOW_RADIUS = 60;
 const PARTICLE_MIN_R = 1.5;
 const PARTICLE_MAX_R = 4.5;
-const PARTICLE_COUNT_BASE = 180;
-const WAVE_AMPLITUDE = 2;
-const WAVE_K = 0.08;
-const WAVE_OMEGA = 0.04;
+const PARTICLE_COUNT_BASE = 350;
+const PARTICLE_COUNT_MAX = 700;
 const ENTANGLEMENT_INTERVAL = 4000;
 const ENTANGLEMENT_DECAY_SPEED = 0.012;
-const BREATH_CYCLE_SEC = 34;
-const GRID_CELL_SIZE = WAVE_THRESHOLD; // Spatial hash cell size
+const GRID_CELL_SIZE = WAVE_THRESHOLD;
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -43,20 +43,15 @@ function randomBetween(a: number, b: number) {
   return a + Math.random() * (b - a);
 }
 
-function distance(a: Particle, b: Particle) {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
 function createParticle(w: number, h: number): Particle {
   const color = COLORS[Math.floor(Math.random() * COLORS.length)];
   const r = randomBetween(PARTICLE_MIN_R, PARTICLE_MAX_R);
+  // Slightly higher initial speeds so particles drift more freely
   return {
     x: Math.random() * w,
     y: Math.random() * h,
-    vx: randomBetween(-1.2, 1.2),
-    vy: randomBetween(-1.2, 1.2),
+    vx: randomBetween(-1.8, 1.8),
+    vy: randomBetween(-1.8, 1.8),
     r,
     baseR: r,
     color,
@@ -111,9 +106,7 @@ export default function QuantumBackground() {
   const rafRef = useRef<number>(0);
   const lastEntanglementRef = useRef(0);
 
-  const visibleRef = useRef(true);
-
-  const animate = useCallback((timestamp: number) => {
+  const visibleRef = useRef(true);    const animate = useCallback((timestamp: number) => {
     const canvas = canvasRef.current;
     if (!canvas || !visibleRef.current) {
       rafRef.current = requestAnimationFrame(animate);
@@ -128,6 +121,7 @@ export default function QuantumBackground() {
     const cH = bounds?.height ?? window.innerHeight;
     const particles = particlesRef.current;
     const mouse = mouseRef.current;
+    const mouseActive = mouse.x > -9000 && mouse.y > -9000;
 
     // Clear
     ctx.globalCompositeOperation = "source-over";
@@ -156,27 +150,28 @@ export default function QuantumBackground() {
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
 
-      // Observer effect
-      const mdx = mouse.x - p.x;
-      const mdy = mouse.y - p.y;
-      const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
+      // ── Mouse attraction ──────────────────────────────────
+      if (mouseActive) {
+        const mdx = mouse.x - p.x;
+        const mdy = mouse.y - p.y;
+        const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
 
-      if (mDist < OBSERVER_THRESHOLD && mDist > 1) {
-        const strength =
-          ((OBSERVER_THRESHOLD - mDist) / OBSERVER_THRESHOLD) * 0.012;
-        p.vx += (mdx / mDist) * strength;
-        p.vy += (mdy / mDist) * strength;
-        p.r += (p.baseR + 1.2 - p.r) * 0.08;
+        if (mDist < MOUSE_ATTRACT_RADIUS && mDist > 1) {
+          // Stronger pull the closer the particle is to the cursor
+          const falloff = 1 - mDist / MOUSE_ATTRACT_RADIUS;
+          const strength = MOUSE_ATTRACT_STRENGTH * falloff * falloff;
+          p.vx += (mdx / mDist) * strength;
+          p.vy += (mdy / mDist) * strength;
+          // Glow brighter near cursor
+          p.r += (p.baseR + 2.0 * falloff - p.r) * 0.12;
+        } else {
+          p.r += (p.baseR - p.r) * 0.08;
+        }
       } else {
         p.r += (p.baseR - p.r) * 0.08;
       }
 
-      // Breathing cycle: sinusoidal repel ↔ attract
-      const breathPhase = Math.sin((timestamp / 1000 / BREATH_CYCLE_SEC) * Math.PI * 2);
-      const breathStrength = 0.008 * Math.abs(breathPhase);
-      const isRepelling = breathPhase < 0;
-
-      // Use spatial grid for neighbor lookups
+      // ── Minimal inter-particle repel (prevent overlap only) ─
       const neighbors = getNeighborIndices(p.x, p.y, grid);
       for (let n = 0; n < neighbors.length; n++) {
         const j = neighbors[n];
@@ -185,29 +180,21 @@ export default function QuantumBackground() {
         const dx = other.x - p.x;
         const dy = other.y - p.y;
         const d = Math.sqrt(dx * dx + dy * dy);
-        if (d < WAVE_THRESHOLD && d > 5) {
-          // Hard repel when particles are overlapping
-          if (d < 12) {
-            const repel = 0.08 * (1 - d / 12);
-            p.vx -= (dx / d) * repel;
-            p.vy -= (dy / d) * repel;
-          } else if (isRepelling) {
-            p.vx -= (dx / d) * breathStrength;
-            p.vy -= (dy / d) * breathStrength;
-          } else {
-            p.vx += (dx / d) * breathStrength;
-            p.vy += (dy / d) * breathStrength;
-          }
+        if (d < 14 && d > 0.1) {
+          // Soft repel to avoid stacking
+          const repel = 0.06 * (1 - d / 14);
+          p.vx -= (dx / d) * repel;
+          p.vy -= (dy / d) * repel;
         }
       }
 
       // Subtle random turbulence
-      p.vx += (Math.random() - 0.5) * 0.08;
-      p.vy += (Math.random() - 0.5) * 0.08;
+      p.vx += (Math.random() - 0.5) * 0.1;
+      p.vy += (Math.random() - 0.5) * 0.1;
 
       // Damping
-      p.vx *= 0.997;
-      p.vy *= 0.997;
+      p.vx *= 0.995;
+      p.vy *= 0.995;
 
       // Move
       p.x += p.vx;
@@ -219,16 +206,15 @@ export default function QuantumBackground() {
       if (p.y < 0) { p.y = 0; p.vy = Math.abs(p.vy); }
       else if (p.y > cH) { p.y = cH; p.vy = -Math.abs(p.vy); }
 
-      // Core dot (no shadow — too expensive)
+      // Core dot
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       ctx.fillStyle = p.color;
       ctx.fill();
     }
 
-    // ── Visible connecting lines (simplified for performance) ──
+    // ── Visible connecting lines ─────────────────────────────
     ctx.lineWidth = 0.75;
-    const time = timestamp * 0.001;
 
     for (let i = 0; i < particles.length; i++) {
       const pA = particles[i];
@@ -279,6 +265,53 @@ export default function QuantumBackground() {
       ctx.stroke();
     }
 
+    // ── Glowing neon cyan mouse cursor ───────────────────────
+    if (mouseActive) {
+      const pulse = 0.8 + Math.sin(timestamp * 0.004) * 0.2;
+      const glowR = MOUSE_GLOW_RADIUS * pulse;
+
+      // Outer soft glow
+      const outerGrad = ctx.createRadialGradient(
+        mouse.x, mouse.y, 0,
+        mouse.x, mouse.y, glowR
+      );
+      outerGrad.addColorStop(0, "rgba(34,211,238,0.25)");
+      outerGrad.addColorStop(0.3, "rgba(34,211,238,0.12)");
+      outerGrad.addColorStop(0.7, "rgba(34,211,238,0.03)");
+      outerGrad.addColorStop(1, "rgba(34,211,238,0)");
+      ctx.beginPath();
+      ctx.arc(mouse.x, mouse.y, glowR, 0, Math.PI * 2);
+      ctx.fillStyle = outerGrad;
+      ctx.fill();
+
+      // Inner bright ring
+      const innerGrad = ctx.createRadialGradient(
+        mouse.x, mouse.y, 0,
+        mouse.x, mouse.y, 18
+      );
+      innerGrad.addColorStop(0, "rgba(34,211,238,0.6)");
+      innerGrad.addColorStop(0.4, "rgba(34,211,238,0.3)");
+      innerGrad.addColorStop(0.8, "rgba(34,211,238,0.08)");
+      innerGrad.addColorStop(1, "rgba(34,211,238,0)");
+      ctx.beginPath();
+      ctx.arc(mouse.x, mouse.y, 18, 0, Math.PI * 2);
+      ctx.fillStyle = innerGrad;
+      ctx.fill();
+
+      // Bright core dot
+      ctx.beginPath();
+      ctx.arc(mouse.x, mouse.y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.fill();
+
+      // Neon cyan ring outline
+      ctx.beginPath();
+      ctx.arc(mouse.x, mouse.y, 10, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(34,211,238,${0.5 * pulse})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
     rafRef.current = requestAnimationFrame(animate);
   }, []);
 
@@ -311,8 +344,8 @@ export default function QuantumBackground() {
     const H = rect?.height ?? window.innerHeight;
     const area = W * H;
     const count = Math.min(
-      Math.round((area / 1200000) * PARTICLE_COUNT_BASE),
-      400
+      Math.round((area / 1000000) * PARTICLE_COUNT_BASE),
+      PARTICLE_COUNT_MAX
     );
     particlesRef.current = Array.from({ length: count }, () =>
       createParticle(W, H)
@@ -361,7 +394,7 @@ export default function QuantumBackground() {
       <canvas
         ref={canvasRef}
         className="w-full h-full block"
-        style={{ willChange: "transform" }}
+        style={{ willChange: "transform", pointerEvents: "auto" }}
       />
       {/* Top fade: solid black at top → transparent below navbar */}
       <div

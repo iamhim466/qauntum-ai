@@ -1,18 +1,17 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import {
   motion,
   AnimatePresence,
-  useMotionValueEvent,
   useScroll,
   useTransform,
 } from "framer-motion";
 import { ChevronDown, X, Sparkles, Atom, Brain, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import QuantumBackground from "@/components/QuantumBackground";
-
-const navLinks = ["Home", "Gemini", "Main Topics", "About"];
+import Navbar from "@/components/Navbar";
 
 const coreTopics = [
   { slug: "superposition", title: "Superposition", desc: "Particles exist in multiple states simultaneously until measured." },
@@ -24,6 +23,13 @@ const coreTopics = [
   { slug: "quantum-tools", title: "Quantum Tools", desc: "Essential instruments and frameworks for quantum research." },
   { slug: "wave-function", title: "Wave Function", desc: "Mathematical description of a quantum system's state." },
   { slug: "schrodingers-cat", title: "Schrödinger's Cat", desc: "Thought experiment illustrating quantum superposition." },
+];
+
+const navLinks = [
+  { label: "Home", href: "/" },
+  { label: "Gemini", href: "/gemini" },
+  { label: "Main Topics", href: "/#topics" },
+  { label: "About", href: "/about" },
 ];
 
 // -- Scroll Reveal Wrapper ---------------------------------------
@@ -102,9 +108,36 @@ const overlayCardVariant = {
 // -- Main Page ---------------------------------------------------
 
 export default function Home() {
-  const [headerScrolled, setHeaderScrolled] = useState(false);
+  return (
+    <Suspense>
+      <HomeInner />
+    </Suspense>
+  );
+}
+
+function HomeInner() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const lastScrollY = useRef(0);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Auto-open overlay if URL has ?open-topics=true
+  useEffect(() => {
+    if (searchParams.get("open-topics") === "true") {
+      setIsExpanded(true);
+      // Clean up the URL without the query param
+      router.replace("/");
+    }
+  }, [searchParams, router]);
+
+  // Lock body scroll when overlay is open
+  useEffect(() => {
+    if (isExpanded) {
+      document.body.classList.add("scroll-locked");
+    } else {
+      document.body.classList.remove("scroll-locked");
+    }
+    return () => document.body.classList.remove("scroll-locked");
+  }, [isExpanded]);
 
   const { scrollY } = useScroll();
 
@@ -117,10 +150,7 @@ export default function Home() {
   const scrollIndicatorOpacity = useTransform(scrollY, [0, 150], [1, 0]);
   const scrollIndicatorScale = useTransform(scrollY, [0, 150], [1, 0.8]);
 
-  useMotionValueEvent(scrollY, "change", (latest) => {
-    setHeaderScrolled(latest > 50);
-    lastScrollY.current = latest;
-  });
+
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -132,98 +162,10 @@ export default function Home() {
         <QuantumBackground />
       </motion.div>
 
-      {/* -- Glassmorphism Navbar with Neon Cyan Glow --------------- */}        <motion.header
-        initial={{ y: -60, opacity: 0 }}
-        animate={{ y: 0, opacity: isExpanded ? 0 : 1 }}
-        transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="fixed top-0 left-0 right-0 z-50 px-6 pt-4"
-        style={{ pointerEvents: isExpanded ? "none" : "auto" }}
-      >
-        <div
-          className={`mx-auto max-w-6xl flex justify-between items-center transition-all duration-500 ease-in-out rounded-2xl ${
-            headerScrolled
-              ? "px-8 py-3"
-              : "px-8 py-4"
-          }`}
-          style={{
-            background: "rgba(0, 20, 30, 0.45)",
-            backdropFilter: "blur(20px) saturate(180%)",
-            WebkitBackdropFilter: "blur(20px) saturate(180%)",
-            border: "1px solid rgba(34, 211, 238, 0.25)",
-            boxShadow: [
-              "0 0 15px rgba(34, 211, 238, 0.15)",
-              "0 0 30px rgba(34, 211, 238, 0.08)",
-              "inset 0 1px 0 rgba(34, 211, 238, 0.1)",
-              headerScrolled ? "0 8px 32px rgba(0,0,0,0.3)" : "0 4px 24px rgba(0,0,0,0.2)",
-            ].join(", "),
-          }}
-        >
-          {/* Logo Group - Left */}
-          <div className="flex items-baseline">
-            <span
-              className={`font-extrabold tracking-tight transition-all duration-500 ease-in-out ${
-                headerScrolled
-                  ? "text-xl"
-                  : "text-2xl"
-              }`}
-              style={{
-                fontFamily: "var(--font-playfair)",
-                color: "white",
-                textShadow: "0 0 20px rgba(34, 211, 238, 0.3)",
-              }}
-            >
-              Quantum
-            </span>
-            <span
-              className={`whitespace-nowrap font-bold tracking-normal ml-2 transition-all duration-500 ease-in-out ${
-                headerScrolled
-                  ? "text-lg"
-                  : "text-xl"
-              }`}
-              style={{
-                fontFamily: "var(--font-great-vibes)",
-                color: "#a855f7",
-                textShadow: "0 0 16px rgba(168, 85, 247, 0.5)",
-              }}
-            >
-              The Easy Way
-            </span>
-          </div>
-
-          {/* Navigation - Right */}
-          <nav
-            className="flex gap-1 items-center whitespace-nowrap"
-            style={{ fontFamily: "var(--font-dm-sans)" }}
-          >
-            {navLinks.map((link) => (
-              <a
-                key={link}
-                href="#"
-                className="relative px-4 py-2 text-sm font-medium text-white/70 rounded-full transition-all duration-300 hover:text-white hover:bg-white/10"
-              >
-                {link}
-              </a>
-            ))}
-          </nav>
-        </div>
-
-        {/* Animated neon cyan glow bar underneath the pill */}
-        <motion.div
-          className="mx-auto max-w-6xl h-[1px] mt-1 rounded-full overflow-hidden"
-          animate={{
-            opacity: [0.5, 1, 0.5],
-          }}
-          transition={{
-            duration: 2.5,
-            ease: "easeInOut",
-            repeat: Infinity,
-          }}
-          style={{
-            background: "linear-gradient(90deg, transparent 0%, #22d3ee 30%, #67e8f9 50%, #22d3ee 70%, transparent 100%)",
-            boxShadow: "0 0 20px rgba(34,211,238,0.5), 0 0 40px rgba(34,211,238,0.2)",
-          }}
-        />
-      </motion.header>
+      {/* -- Shared Navbar -------------------------------------------- */}
+      <div style={{ opacity: isExpanded ? 0 : 1, pointerEvents: isExpanded ? "none" : "auto", transition: "opacity 0.4s ease" }}>
+        <Navbar onMainTopics={() => setIsExpanded(true)} />
+      </div>
 
       {/* -- Content Sections ----------------------------------------- */}
       <div className="relative z-10">
@@ -261,7 +203,7 @@ export default function Home() {
               interactive lessons, simulations, and AI-powered explanations.
             </motion.p>
 
-            {/* -- Start Learning Button with layoutId -------------------- */}
+            {/* -- Start Learning Button -------------------- */}
             <motion.div
               className="mt-8"
               initial={{ opacity: 0, y: 20 }}
@@ -269,7 +211,6 @@ export default function Home() {
               transition={{ duration: 0.8, delay: 0.7, ease: "easeOut" }}
             >
               <motion.button
-                layoutId="hero-expansion"
                 onClick={() => setIsExpanded(true)}
                 className="px-8 py-3 rounded-full border border-purple-500 text-purple-400 font-medium hover:bg-purple-500/10 transition-colors"
                 style={{ fontFamily: "var(--font-dm-sans)" }}
@@ -370,7 +311,7 @@ export default function Home() {
         </section>
 
         {/* -- Main Topics Section ------------------------------------ */}
-        <section className="relative py-32 px-12 bg-black/50 backdrop-blur-sm">
+        <section id="topics" className="relative py-32 px-12 bg-black/50 backdrop-blur-sm">
           <div className="max-w-6xl mx-auto">
             <ScrollReveal>
               <h2
@@ -505,18 +446,16 @@ export default function Home() {
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            layoutId="hero-expansion"
             className="fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-gradient-to-br from-purple-950 via-fuchsia-950/60 to-slate-950"
-            initial={{ borderRadius: "9999px", opacity: 0.8 }}
+            style={{ overscrollBehavior: "contain" }}
+            initial={{ opacity: 0 }}
             animate={{
-              borderRadius: "0px",
               opacity: 1,
-              transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
+              transition: { duration: 0.5, ease: "easeOut" },
             }}
             exit={{
-              borderRadius: "9999px",
               opacity: 0,
-              transition: { duration: 0.4, ease: [0.55, 0, 1, 0.45] },
+              transition: { duration: 0.35, ease: "easeIn" },
             }}
           >
             {/* Ambient Background Pulse */}
@@ -530,21 +469,98 @@ export default function Home() {
               }}
             />
 
-            {/* Close Button */}
-            <motion.button
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-              transition={{ delay: 0.4, duration: 0.3 }}
-              onClick={() => setIsExpanded(false)}
-              className="fixed top-6 right-6 z-[110] p-3 rounded-full bg-black/20 border border-white/30 text-white hover:bg-black/30 transition-all"
-              aria-label="Close"
+            {/* ── Compact Navbar inside overlay ──────────────────── */}
+            <motion.header
+              initial={{ y: -40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -40, opacity: 0 }}
+              transition={{ delay: 0.3, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="fixed top-0 left-0 right-0 z-[110] px-6 pt-3 pb-2"
             >
-              <X className="w-6 h-6" />
-            </motion.button>
+              <div
+                className="mx-auto max-w-5xl flex justify-between items-center rounded-xl px-5 py-2"
+                style={{
+                  background: "rgba(0, 20, 30, 0.55)",
+                  backdropFilter: "blur(16px) saturate(180%)",
+                  WebkitBackdropFilter: "blur(16px) saturate(180%)",
+                  border: "1px solid rgba(34, 211, 238, 0.2)",
+                  boxShadow: "0 0 12px rgba(34, 211, 238, 0.1), 0 4px 20px rgba(0,0,0,0.3)",
+                }}
+              >
+                {/* Logo Group - Left */}
+                <Link href="/" className="flex items-baseline">
+                  <span
+                    className="text-base font-extrabold tracking-tight"
+                    style={{
+                      fontFamily: "var(--font-playfair)",
+                      color: "white",
+                      textShadow: "0 0 16px rgba(34, 211, 238, 0.3)",
+                    }}
+                  >
+                    Quantum
+                  </span>
+                  <span
+                    className="whitespace-nowrap font-bold tracking-normal ml-1.5 text-sm"
+                    style={{
+                      fontFamily: "var(--font-great-vibes)",
+                      color: "#a855f7",
+                      textShadow: "0 0 12px rgba(168, 85, 247, 0.5)",
+                    }}
+                  >
+                    The Easy Way
+                  </span>
+                </Link>
+
+                {/* Navigation - Right */}
+                <nav
+                  className="flex gap-0.5 items-center whitespace-nowrap"
+                  style={{ fontFamily: "var(--font-dm-sans)" }}
+                >
+                  {navLinks.map((link) => (
+                    <Link
+                      key={link.label}
+                      href={link.href}
+                      onClick={(e) => {
+                        if (link.href === "/#topics") {
+                          e.preventDefault();
+                          setIsExpanded(false);
+                          setTimeout(() => {
+                            document.getElementById("topics")?.scrollIntoView({ behavior: "smooth" });
+                          }, 100);
+                        } else if (link.href === "/") {
+                          setIsExpanded(false);
+                        }
+                      }}
+                      className="relative px-3 py-1.5 text-xs font-medium text-white/70 rounded-full transition-all duration-300 hover:text-white hover:bg-white/10"
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                  {/* Close button as nav item */}
+                  <button
+                    onClick={() => setIsExpanded(false)}
+                    className="ml-1 p-1.5 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-all"
+                    aria-label="Close"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </nav>
+              </div>
+
+              {/* Animated glow bar */}
+              <motion.div
+                className="mx-auto max-w-5xl h-px mt-1 rounded-full overflow-hidden"
+                animate={{ opacity: [0.4, 0.8, 0.4] }}
+                transition={{ duration: 2.5, ease: "easeInOut", repeat: Infinity }}
+                style={{
+                  background: "linear-gradient(90deg, transparent 0%, #22d3ee 30%, #67e8f9 50%, #22d3ee 70%, transparent 100%)",
+                  boxShadow: "0 0 16px rgba(34,211,238,0.4)",
+                }}
+              />
+            </motion.header>
 
             {/* Expanded Content */}
-            <div className="relative z-10 flex-1 flex flex-col items-center px-8 pt-24 pb-32" style={{ justifyContent: 'flex-start' }}>
+            <div className="relative z-10 flex-1 flex flex-col items-center px-8 pt-[72px] pb-32" style={{ justifyContent: 'flex-start' }}>
               <AnimatePresence>
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
