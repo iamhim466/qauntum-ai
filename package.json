@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.18",
+    "@ai-sdk/react": "^4.0.37",
     "@splinetool/react-spline": "^4.1.0",
     "@splinetool/runtime": "^1.12.98",
     "@types/three": "^0.185.1",
+    "ai": "^7.0.34",
     "animejs": "^4.5.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.42.2",

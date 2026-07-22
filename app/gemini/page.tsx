@@ -15,23 +15,15 @@ import {
   Lightbulb,
   ArrowRight,
 } from "lucide-react";
+import { useChat } from "@ai-sdk/react";
 import Navbar from "@/components/Navbar";
 
 // ── Types ──────────────────────────────────────────────────────
 
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-}
-
-interface Chat {
+interface StoredChat {
   id: string;
   title: string;
-  messages: Message[];
-  createdAt: Date;
-  updatedAt: Date;
+  messages: Array<{ id: string; role: "user" | "assistant"; parts: Array<{ type: string; text?: string }> }>;
 }
 
 // ── Sample prompts ─────────────────────────────────────────────
@@ -43,132 +35,163 @@ const samplePrompts = [
   { icon: <Sparkles className="w-5 h-5" />, text: "How do quantum computers work?" },
 ];
 
-// ── Helper ─────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────
 
 function generateId() {
   return Math.random().toString(36).substring(2, 11);
 }
 
+/** Extract plain text from a UIMessage's parts array */
+function getMessageText(msg: { parts?: Array<{ type: string; text?: string }> }): string {
+  if (!msg.parts) return "";
+  return msg.parts
+    .filter((p) => p.type === "text")
+    .map((p) => p.text ?? "")
+    .join("");
+}
+
 // ── Component ──────────────────────────────────────────────────
 
 export default function GeminiPage() {
-  const [chats, setChats] = useState<Chat[]>([]);
+  const [chats, setChats] = useState<StoredChat[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
-  const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const { messages, sendMessage, setMessages, status, error, clearError } = useChat();
+
+  const isLoading = status === "submitted" || status === "streaming";
   const activeChat = chats.find((c) => c.id === activeChatId);
 
-  // Auto-scroll to bottom
+  // ── Auto-scroll ─────────────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeChat?.messages]);
+  }, [messages]);
+
+  // ── Auto-resize textarea ────────────────────────────────────
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = Math.min(el.scrollHeight, 200) + "px";
+    }
+  }, [inputValue]);
+
+  // ── Sync messages back to active chat state ──────────────────
+  useEffect(() => {
+    if (activeChatId && messages.length > 0) {
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === activeChatId
+            ? {
+                ...chat,
+                messages: messages.map((m) => ({
+                  id: m.id,
+                  role: m.role as "user" | "assistant",
+                  parts: (m.parts ?? []) as Array<{ type: string; text?: string }>,
+                })),
+              }
+            : chat
+        )
+      );
+    }
+  }, [messages, activeChatId]);
 
   // ── Chat actions ──────────────────────────────────────────────
 
   function createNewChat() {
     setActiveChatId(null);
-    setInput("");
+    setMessages([]);
+    setInputValue("");
   }
 
-  function startChatWithMessage(message: string) {
-    const newChat: Chat = {
+  function switchChat(chatId: string) {
+    // Save current messages before switching
+    if (activeChatId && messages.length > 0) {
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === activeChatId
+            ? {
+                ...chat,
+                messages: messages.map((m) => ({
+                  id: m.id,
+                  role: m.role as "user" | "assistant",
+                  parts: (m.parts ?? []) as Array<{ type: string; text?: string }>,
+                })),
+              }
+            : chat
+        )
+      );
+    }
+
+    setActiveChatId(chatId);
+
+    // Load the target chat's messages into useChat
+    const targetChat = chats.find((c) => c.id === chatId);
+    if (targetChat) {
+      setMessages(
+        targetChat.messages.map((m) => ({
+          id: m.id,
+          role: m.role,
+          parts: m.parts,
+        })) as never[]
+      );
+    } else {
+      setMessages([]);
+    }
+  }
+
+  function handleSend(text?: string) {
+    const textToSend = (text ?? inputValue).trim();
+    if (!textToSend || isLoading) return;
+
+    // If no active chat, create one
+    if (!activeChatId) {
+      const newChat: StoredChat = {
+        id: generateId(),
+        title: textToSend.slice(0, 40) + (textToSend.length > 40 ? "..." : ""),
+        messages: [],
+      };
+      setChats((prev) => [newChat, ...prev]);
+      setActiveChatId(newChat.id);
+    }
+
+    setInputValue("");
+    sendMessage({ text: textToSend });
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  }
+
+  function startChatWithSample(sampleText: string) {
+    const newChat: StoredChat = {
       id: generateId(),
-      title: message.slice(0, 40) + (message.length > 40 ? "..." : ""),
+      title: sampleText.slice(0, 40),
       messages: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
     };
     setChats((prev) => [newChat, ...prev]);
     setActiveChatId(newChat.id);
-    sendMessage(newChat.id, message);
-  }
-
-  function sendMessage(chatId: string, content: string) {
-    if (!content.trim()) return;
-
-    const userMessage: Message = {
-      id: generateId(),
-      role: "user",
-      content: content.trim(),
-      timestamp: new Date(),
-    };
-
-    setChats((prev) =>
-      prev.map((chat) => {
-        if (chat.id !== chatId) return chat;
-        return {
-          ...chat,
-          messages: [...chat.messages, userMessage],
-          updatedAt: new Date(),
-        };
-      })
-    );
-
-    setInput("");
-    setIsTyping(true);
-
-    // Simulate AI response
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: generateId(),
-        role: "assistant",
-        content: getSimulatedResponse(content),
-        timestamp: new Date(),
-      };
-
-      setChats((prev) =>
-        prev.map((chat) => {
-          if (chat.id !== chatId) return chat;
-          return {
-            ...chat,
-            messages: [...chat.messages, aiMessage],
-            updatedAt: new Date(),
-          };
-        })
-      );
-      setIsTyping(false);
-    }, 1500 + Math.random() * 1000);
+    setInputValue("");
+    sendMessage({ text: sampleText });
   }
 
   function deleteChat(chatId: string) {
     setChats((prev) => prev.filter((c) => c.id !== chatId));
     if (activeChatId === chatId) {
       setActiveChatId(null);
+      setMessages([]);
     }
   }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!input.trim() || isTyping) return;
-
-    if (activeChatId) {
-      sendMessage(activeChatId, input);
-    } else {
-      startChatWithMessage(input);
-    }
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
-  }
-
-  // Auto-resize textarea
-  useEffect(() => {
-    const el = inputRef.current;
-    if (el) {
-      el.style.height = "auto";
-      el.style.height = Math.min(el.scrollHeight, 200) + "px";
-    }
-  }, [input]);
 
   // ── Render ────────────────────────────────────────────────────
+
+  const hasMessages = activeChatId !== null && messages.length > 0;
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -222,15 +245,18 @@ export default function GeminiPage() {
                   <div className="flex-1 overflow-y-auto px-2 pb-3">
                     <div className="space-y-0.5">
                       {chats.map((chat) => (
-                        <button
+                        <div
                           key={chat.id}
-                          className={`w-full group flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all duration-200 ${
+                          role="button"
+                          tabIndex={0}
+                          className={`w-full group flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all duration-200 cursor-pointer ${
                             chat.id === activeChatId
                               ? "bg-white/8 text-white"
                               : "text-white/50 hover:bg-white/4 hover:text-white/70"
                           }`}
                           style={{ fontFamily: "var(--font-dm-sans)" }}
-                          onClick={() => setActiveChatId(chat.id)}
+                          onClick={() => switchChat(chat.id)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchChat(chat.id); } }}
                         >
                           <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 opacity-40" />
                           <span className="truncate flex-1 text-left">{chat.title}</span>
@@ -243,7 +269,7 @@ export default function GeminiPage() {
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
-                        </button>
+                        </div>
                       ))}
                     </div>
 
@@ -288,47 +314,99 @@ export default function GeminiPage() {
 
             {/* Messages or Welcome */}
             <div className="flex-1 overflow-y-auto">
-              {activeChat && activeChat.messages.length > 0 ? (
+              {hasMessages ? (
                 /* ── Active Chat Messages ────────────────────────── */
                 <div className="max-w-3xl mx-auto py-6 px-6">
                   <AnimatePresence>
-                    {activeChat.messages.map((msg) => (
-                      <motion.div
-                        key={msg.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className={`mb-6 flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                      >
-                        {msg.role === "assistant" && (
-                          <div className="flex-shrink-0 mr-3 mt-1">
-                            <div
-                              className="w-7 h-7 rounded-full flex items-center justify-center"
-                              style={{
-                                background: "linear-gradient(135deg, rgba(168,85,247,0.25), rgba(34,211,238,0.25))",
-                                border: "1px solid rgba(34,211,238,0.2)",
-                              }}
-                            >
-                              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                            </div>
-                          </div>
-                        )}
-                        <div
-                          className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                            msg.role === "user"
-                              ? "bg-purple-500/15 border border-purple-500/25 text-white"
-                              : "bg-white/4 border border-white/8 text-white/85"
-                          }`}
-                          style={{ fontFamily: "var(--font-dm-sans)" }}
+                    {messages.map((msg) => {
+                      const text = getMessageText(msg);
+                      if (!text && msg.role !== "user") return null;
+                      return (
+                        <motion.div
+                          key={msg.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className={`mb-6 flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                         >
-                          {msg.content}
-                        </div>
-                      </motion.div>
-                    ))}
+                          {msg.role === "assistant" && (
+                            <div className="flex-shrink-0 mr-3 mt-1">
+                              <div
+                                className="w-7 h-7 rounded-full flex items-center justify-center"
+                                style={{
+                                  background: "linear-gradient(135deg, rgba(168,85,247,0.25), rgba(34,211,238,0.25))",
+                                  border: "1px solid rgba(34,211,238,0.2)",
+                                }}
+                              >
+                                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                              </div>
+                            </div>
+                          )}
+                          <div
+                            className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                              msg.role === "user"
+                                ? "bg-purple-500/15 border border-purple-500/25 text-white"
+                                : "bg-white/4 border border-white/8 text-white/85"
+                            }`}
+                            style={{ fontFamily: "var(--font-dm-sans)" }}
+                          >
+                            {text}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
                   </AnimatePresence>
 
+                  {/* Error banner */}
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="mb-6 mx-auto max-w-2xl"
+                    >
+                      <div
+                        className="flex items-start gap-3 p-4 rounded-xl border"
+                        style={{
+                          background: "rgba(239,68,68,0.08)",
+                          border: "1px solid rgba(239,68,68,0.25)",
+                        }}
+                      >
+                        <div className="flex-shrink-0 mt-0.5">
+                          <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0zm-9 3.75h.008v.008H12v-.008z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-red-300 font-medium mb-1" style={{ fontFamily: "var(--font-dm-sans)" }}>
+                            {error.message.includes("quota")
+                              ? "API Quota Exceeded"
+                              : error.message.includes("API key")
+                                ? "API Key Issue"
+                                : "Something went wrong"}
+                          </p>
+                          <p className="text-xs text-red-300/70 leading-relaxed" style={{ fontFamily: "var(--font-dm-sans)" }}>
+                            {error.message.includes("quota")
+                              ? "You've used up your free Gemini API quota. It resets daily at midnight Pacific Time, or you can enable billing at aistudio.google.com for higher limits."
+                              : error.message.includes("API key")
+                                ? "Please check your GOOGLE_GENERATIVE_AI_API_KEY in .env.local."
+                                : error.message}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => clearError()}
+                          className="flex-shrink-0 p-1 rounded hover:bg-white/10 text-red-400/60 hover:text-red-300 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
                   {/* Typing indicator */}
-                  {isTyping && (
+                  {isLoading && (
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
@@ -390,18 +468,7 @@ export default function GeminiPage() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.2 + i * 0.08 }}
-                          onClick={() => {
-                            const newChat: Chat = {
-                              id: generateId(),
-                              title: prompt.text.slice(0, 40),
-                              messages: [],
-                              createdAt: new Date(),
-                              updatedAt: new Date(),
-                            };
-                            setChats((prev) => [newChat, ...prev]);
-                            setActiveChatId(newChat.id);
-                            sendMessage(newChat.id, prompt.text);
-                          }}
+                          onClick={() => startChatWithSample(prompt.text)}
                           className="flex items-center gap-3 p-3.5 rounded-xl text-left transition-all duration-200 hover:bg-white/4 group"
                           style={{
                             background: "rgba(255,255,255,0.015)",
@@ -425,7 +492,13 @@ export default function GeminiPage() {
 
             {/* ── Input Area ───────────────────────────────────────── */}
             <div className="px-4 pb-4 pt-2">
-              <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSend();
+                }}
+                className="max-w-3xl mx-auto"
+              >
                 <div
                   className="flex items-end gap-2 rounded-2xl px-4 py-3"
                   style={{
@@ -434,9 +507,9 @@ export default function GeminiPage() {
                   }}
                 >
                   <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
+                    ref={textareaRef}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Ask about quantum physics..."
                     rows={1}
@@ -445,10 +518,10 @@ export default function GeminiPage() {
                   />
                   <button
                     type="submit"
-                    disabled={!input.trim() || isTyping}
+                    disabled={!inputValue.trim() || isLoading}
                     className="flex-shrink-0 p-2 rounded-xl transition-all duration-200 disabled:opacity-15 disabled:cursor-not-allowed hover:bg-white/8"
                     style={{
-                      color: input.trim() ? "#22d3ee" : "rgba(255,255,255,0.25)",
+                      color: inputValue.trim() ? "#22d3ee" : "rgba(255,255,255,0.25)",
                     }}
                   >
                     <Send className="w-4 h-4" />
@@ -467,44 +540,4 @@ export default function GeminiPage() {
       </div>
     </div>
   );
-}
-
-// ── Simulated AI Responses ─────────────────────────────────────
-
-function getSimulatedResponse(question: string): string {
-  const q = question.toLowerCase();
-
-  if (q.includes("superposition")) {
-    return "Superposition is one of the most fascinating principles in quantum mechanics. It states that a quantum system can exist in multiple states simultaneously until it is measured.\n\nThink of it like a coin spinning in the air — it's neither heads nor tails until it lands. In the quantum world, particles like electrons can be in a superposition of spin-up and spin-down states at the same time.\n\nMathematically, we express this as |ψ⟩ = α|0⟩ + β|1⟩, where α and β are probability amplitudes. When we measure, the superposition \"collapses\" into one definite state.\n\nThis is the foundation of quantum computing — qubits leverage superposition to process multiple calculations simultaneously, giving quantum computers their exponential computational power for certain tasks.";
-  }
-
-  if (q.includes("entanglement")) {
-    return "Quantum entanglement is what Einstein famously called \"spooky action at a distance.\" It occurs when two or more particles become linked in such a way that the quantum state of each particle cannot be described independently.\n\nWhen two particles are entangled, measuring one instantly determines the state of the other — regardless of the distance between them. They could be on opposite sides of the galaxy, and the correlation would still be instantaneous.\n\nThe most famous entangled state is the Bell state: |Φ⁺⟩ = (|00⟩ + |11⟩)/√2. Measuring the first particle as |0⟩ immediately tells you the second is also |0⟩.\n\nApplications include quantum teleportation, ultra-secure quantum key distribution, and quantum computing. In 2022, the Nobel Prize in Physics was awarded for experimental work proving entanglement is real.";
-  }
-
-  if (q.includes("wave-particle") || q.includes("duality")) {
-    return "Wave-particle duality is the concept that every quantum entity exhibits both wave and particle properties. It's one of the most mind-bending ideas in physics.\n\nThe double-slit experiment perfectly demonstrates this: when electrons pass through two slits, they create an interference pattern like waves. But when you observe which slit they go through, they behave like particles, hitting the screen in discrete spots.\n\nLight was the first to show this duality — Einstein showed that light (thought to be purely a wave) also behaves as discrete packets called photons. De Broglie then proposed that all matter has wave-like properties, confirmed when electrons produced diffraction patterns.\n\nThe wavelength of any particle is inversely proportional to its momentum: λ = h/p. This is why we don't notice wave behavior in everyday objects — their wavelengths are immeasurably small.";
-  }
-
-  if (q.includes("quantum computing") || q.includes("qubit")) {
-    return "Quantum computing harnesses quantum-mechanical phenomena like superposition and entanglement to perform computations. It's fundamentally different from classical computing.\n\nClassical bits are either 0 or 1. Qubits, however, can exist in superpositions of both states simultaneously. When you have n qubits, you can represent 2^n states at once — exponential growth.\n\nKey concepts:\n• Quantum gates (H, X, Z, CNOT) manipulate qubits\n• Quantum circuits combine gates to perform algorithms\n• Shor's algorithm can factor large numbers exponentially faster than classical computers\n• Grover's algorithm speeds up database searches quadratically\n\nCompanies like IBM, Google, and others are building quantum processors. We're in the NISQ (Noisy Intermediate-Scale Quantum) era, working toward fault-tolerant quantum computing with error correction.";
-  }
-
-  if (q.includes("tunneling")) {
-    return "Quantum tunneling is a phenomenon where a particle passes through a potential energy barrier that it classically could not surmount. It's one of the most counterintuitive quantum effects.\n\nIn classical physics, if you throw a ball at a wall, it bounces back. But in quantum mechanics, a particle's wave function extends beyond the barrier, giving it a non-zero probability of appearing on the other side.\n\nThe tunneling probability decays exponentially with barrier width: T ∝ e^(-2κL). This means thinner barriers are more transparent to quantum particles.\n\nNatural applications:\n• Nuclear fusion in stars (protons tunnel through electrostatic repulsion)\n• Radioactive alpha decay\n• Scanning tunneling microscopes (can image individual atoms)\n• Flash memory and tunnel diodes in electronics";
-  }
-
-  if (q.includes("observer") || q.includes("measurement")) {
-    return "The observer effect in quantum mechanics refers to the phenomenon where measuring or observing a quantum system fundamentally changes its state. Before measurement, a system exists in superposition; measurement causes it to collapse into a definite state.\n\nThis is at the heart of the measurement problem — one of the deepest puzzles in physics. Different interpretations offer different explanations:\n\n• Copenhagen interpretation: The wave function represents our knowledge, and measurement updates it\n• Many-Worlds: No collapse occurs — the universe branches into parallel realities\n• Pilot wave theory: Hidden variables guide particles along definite paths\n\nSchrödinger's cat illustrates this: a cat in a sealed box with a quantum trigger exists in superposition of alive AND dead until observed.\n\nPractically, the observer effect matters in quantum computing (decoherence), quantum cryptography (eavesdropping detection), and building reliable quantum technologies.";
-  }
-
-  if (q.includes("wave function") || q.includes("schrodinger")) {
-    return "The wave function (ψ) is a mathematical function that describes the quantum state of a system. It contains all information that can be known about a quantum system.\n\nThe time-dependent Schrödinger equation governs how wave functions evolve:\niℏ ∂ψ/∂t = Ĥψ\n\nThis is the quantum equivalent of Newton's second law — given a wave function at one time, it predicts the wave function at any future time.\n\nKey points:\n• |ψ|² gives the probability density of finding a particle at a given location (Born rule)\n• The wave function must be normalized (total probability = 1)\n• Different interpretations give different physical meanings to ψ\n• In Copenhagen, it represents knowledge; in Many-Worlds, it's fundamental reality\n\nThe Schrödinger equation is to quantum mechanics what F=ma is to classical mechanics — the fundamental equation of motion.";
-  }
-
-  if (q.includes("schrodinger") && q.includes("cat")) {
-    return "Schrödinger's cat is a famous thought experiment proposed by Erwin Schrödinger in 1935 to illustrate the measurement problem in quantum mechanics.\n\nThe setup: A cat is placed in a sealed box with a radioactive atom, a Geiger counter, and a vial of poison. If the atom decays (a quantum event with 50% probability in one hour), the Geiger counter triggers, breaking the vial and killing the cat.\n\nAccording to quantum mechanics, until the box is opened, the atom is in superposition of decayed and not decayed. This means the cat is simultaneously alive AND dead — a superposition that persists until measurement.\n\nSchrödinger designed this to highlight what he saw as the absurdity of applying quantum superposition to everyday objects. How can a cat be both alive and dead?\n\nToday, physicists understand that quantum superposition is fragile and collapses quickly for large objects due to decoherence. The thought experiment remains a powerful illustration of quantum measurement and the boundary between quantum and classical worlds.";
-  }
-
-  return `That's a great question about quantum physics! Let me share what I know.\n\nQuantum mechanics is the branch of physics that deals with the behavior of matter and energy at the smallest scales — atoms, electrons, photons, and other subatomic particles. At these scales, the rules of classical physics break down, and strange quantum effects take over.\n\nKey principles include:\n• Superposition — particles exist in multiple states simultaneously\n• Entanglement — particles can be instantaneously correlated\n• Wave-particle duality — matter exhibits both wave and particle properties\n• The uncertainty principle — certain pairs of properties cannot be precisely known simultaneously\n• Quantum tunneling — particles can pass through barriers\n\nThese principles aren't just theoretical curiosities — they're the foundation of technologies like semiconductors, lasers, MRI machines, and quantum computers.\n\nWould you like me to explain any of these concepts in more detail?`;
 }
