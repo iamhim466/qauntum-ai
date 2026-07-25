@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -14,17 +14,27 @@ import {
   Brain,
   Lightbulb,
   ArrowRight,
+  Zap,
+  FlaskConical,
 } from "lucide-react";
-import { useChat } from "@ai-sdk/react";
 import Navbar from "@/components/Navbar";
 
 // ── Types ──────────────────────────────────────────────────────
 
+interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
+
 interface StoredChat {
   id: string;
   title: string;
-  messages: Array<{ id: string; role: "user" | "assistant"; parts: Array<{ type: string; text?: string }> }>;
+  messages: Message[];
+  modelType: ModelType;
 }
+
+type ModelType = "fast" | "reasoning";
 
 // ── Sample prompts ─────────────────────────────────────────────
 
@@ -41,34 +51,27 @@ function generateId() {
   return Math.random().toString(36).substring(2, 11);
 }
 
-/** Extract plain text from a UIMessage's parts array */
-function getMessageText(msg: { parts?: Array<{ type: string; text?: string }> }): string {
-  if (!msg.parts) return "";
-  return msg.parts
-    .filter((p) => p.type === "text")
-    .map((p) => p.text ?? "")
-    .join("");
-}
-
 // ── Component ──────────────────────────────────────────────────
 
-export default function GeminiPage() {
+export default function ChatPage() {
   const [chats, setChats] = useState<StoredChat[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [inputValue, setInputValue] = useState("");
+  const [modelType, setModelType] = useState<ModelType>("fast");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  const { messages, sendMessage, setMessages, status, error, clearError } = useChat();
-
-  const isLoading = status === "submitted" || status === "streaming";
   const activeChat = chats.find((c) => c.id === activeChatId);
+  const currentMessages = activeChat?.messages ?? [];
 
   // ── Auto-scroll ─────────────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [currentMessages]);
 
   // ── Auto-resize textarea ────────────────────────────────────
   useEffect(() => {
@@ -79,87 +82,177 @@ export default function GeminiPage() {
     }
   }, [inputValue]);
 
-  // ── Sync messages back to active chat state ──────────────────
-  useEffect(() => {
-    if (activeChatId && messages.length > 0) {
+  // ── Streaming send ──────────────────────────────────────────
+  const handleSend = useCallback(
+    async (text?: string, overrideModelType?: ModelType) => {
+      const textToSend = (text ?? inputValue).trim();
+      if (!textToSend || isLoading) return;
+
+      setError(null);
+
+      let chatId = activeChatId;
+
+      // Create new chat if none active
+      if (!chatId) {
+        const newChat: StoredChat = {
+          id: generateId(),
+          title: textToSend.slice(0, 40) + (textToSend.length > 40 ? "..." : ""),
+          messages: [],
+          modelType,
+        };
+        setChats((prev) => [newChat, ...prev]);
+        chatId = newChat.id;
+        setActiveChatId(chatId);
+      }
+
+      const effectiveModelType = overrideModelType ?? modelType;
+      const userMsg: Message = { id: generateId(), role: "user", content: textToSend };
+      const assistantMsg: Message = { id: generateId(), role: "assistant", content: "" };
+
+      // Add user message and empty assistant message
       setChats((prev) =>
         prev.map((chat) =>
-          chat.id === activeChatId
-            ? {
-                ...chat,
-                messages: messages.map((m) => ({
-                  id: m.id,
-                  role: m.role as "user" | "assistant",
-                  parts: (m.parts ?? []) as Array<{ type: string; text?: string }>,
-                })),
-              }
+          chat.id === chatId
+            ? { ...chat, messages: [...chat.messages, userMsg, assistantMsg] }
             : chat
         )
       );
-    }
-  }, [messages, activeChatId]);
 
-  // ── Chat actions ──────────────────────────────────────────────
+      setInputValue("");
+      setIsLoading(true);
+
+      // Build message history for API
+      const targetChat = chats.find((c) => c.id === chatId) ?? { messages: [] };
+      const apiMessages = [...targetChat.messages, userMsg].map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      try {
+        abortRef.current = new AbortController();
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: apiMessages, modelType: effectiveModelType }),
+          signal: abortRef.current.signal,
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({ error: "Unknown error" }));
+          throw new Error(errData.error || `API error (${res.status})`);
+        }
+
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let accumulated = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+
+          // Parse SSE stream (Groq uses OpenAI-compatible format)
+          const lines = chunk.split("\n");
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6).trim();
+              if (data === "[DONE]") continue;
+              try {
+                const parsed = JSON.parse(data);
+                const delta = parsed.choices?.[0]?.delta?.content;
+                if (delta) {
+                  accumulated += delta;
+                  // Update the assistant message in real-time
+                  setChats((prev) =>
+                    prev.map((chat) =>
+                      chat.id === chatId
+                        ? {
+                            ...chat,
+                            messages: chat.messages.map((m) =>
+                              m.id === assistantMsg.id
+                                ? { ...m, content: accumulated }
+                                : m
+                            ),
+                          }
+                        : chat
+                    )
+                  );
+                }
+              } catch {
+                // Cloudflare or non-JSON lines — accumulate raw text
+                accumulated += data;
+                setChats((prev) =>
+                  prev.map((chat) =>
+                    chat.id === chatId
+                      ? {
+                          ...chat,
+                          messages: chat.messages.map((m) =>
+                            m.id === assistantMsg.id
+                              ? { ...m, content: accumulated }
+                              : m
+                          ),
+                        }
+                      : chat
+                  )
+                );
+              }
+            } else if (line.trim() && !line.startsWith(":")) {
+              // Cloudflare streaming (non-SSE format)
+              accumulated += line;
+              setChats((prev) =>
+                prev.map((chat) =>
+                  chat.id === chatId
+                    ? {
+                        ...chat,
+                        messages: chat.messages.map((m) =>
+                          m.id === assistantMsg.id
+                            ? { ...m, content: accumulated }
+                            : m
+                        ),
+                      }
+                    : chat
+                )
+              );
+            }
+          }
+        }
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          // User cancelled — leave accumulated text as-is
+        } else {
+          const msg = err instanceof Error ? err.message : "Something went wrong";
+          setError(msg);
+          // Remove empty assistant message on error
+          setChats((prev) =>
+            prev.map((chat) =>
+              chat.id === chatId
+                ? {
+                    ...chat,
+                    messages: chat.messages.filter((m) => m.id !== assistantMsg.id),
+                  }
+                : chat
+            )
+          );
+        }
+      } finally {
+        setIsLoading(false);
+        abortRef.current = null;
+      }
+    },
+    [inputValue, isLoading, activeChatId, chats, modelType]
+  );
+
+  // ── Chat actions ──────────────────────────────────────────
 
   function createNewChat() {
     setActiveChatId(null);
-    setMessages([]);
-    setInputValue("");
+    setError(null);
   }
 
   function switchChat(chatId: string) {
-    // Save current messages before switching
-    if (activeChatId && messages.length > 0) {
-      setChats((prev) =>
-        prev.map((chat) =>
-          chat.id === activeChatId
-            ? {
-                ...chat,
-                messages: messages.map((m) => ({
-                  id: m.id,
-                  role: m.role as "user" | "assistant",
-                  parts: (m.parts ?? []) as Array<{ type: string; text?: string }>,
-                })),
-              }
-            : chat
-        )
-      );
-    }
-
     setActiveChatId(chatId);
-
-    // Load the target chat's messages into useChat
-    const targetChat = chats.find((c) => c.id === chatId);
-    if (targetChat) {
-      setMessages(
-        targetChat.messages.map((m) => ({
-          id: m.id,
-          role: m.role,
-          parts: m.parts,
-        })) as never[]
-      );
-    } else {
-      setMessages([]);
-    }
-  }
-
-  function handleSend(text?: string) {
-    const textToSend = (text ?? inputValue).trim();
-    if (!textToSend || isLoading) return;
-
-    // If no active chat, create one
-    if (!activeChatId) {
-      const newChat: StoredChat = {
-        id: generateId(),
-        title: textToSend.slice(0, 40) + (textToSend.length > 40 ? "..." : ""),
-        messages: [],
-      };
-      setChats((prev) => [newChat, ...prev]);
-      setActiveChatId(newChat.id);
-    }
-
-    setInputValue("");
-    sendMessage({ text: textToSend });
+    setError(null);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -170,28 +263,20 @@ export default function GeminiPage() {
   }
 
   function startChatWithSample(sampleText: string) {
-    const newChat: StoredChat = {
-      id: generateId(),
-      title: sampleText.slice(0, 40),
-      messages: [],
-    };
-    setChats((prev) => [newChat, ...prev]);
-    setActiveChatId(newChat.id);
-    setInputValue("");
-    sendMessage({ text: sampleText });
+    handleSend(sampleText, "fast");
   }
 
   function deleteChat(chatId: string) {
     setChats((prev) => prev.filter((c) => c.id !== chatId));
     if (activeChatId === chatId) {
       setActiveChatId(null);
-      setMessages([]);
+      setError(null);
     }
   }
 
-  // ── Render ────────────────────────────────────────────────────
+  // ── Render ──────────────────────────────────────────────────
 
-  const hasMessages = activeChatId !== null && messages.length > 0;
+  const hasMessages = activeChatId !== null && currentMessages.length > 0;
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -256,10 +341,18 @@ export default function GeminiPage() {
                           }`}
                           style={{ fontFamily: "var(--font-dm-sans)" }}
                           onClick={() => switchChat(chat.id)}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchChat(chat.id); } }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              switchChat(chat.id);
+                            }
+                          }}
                         >
                           <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 opacity-40" />
                           <span className="truncate flex-1 text-left">{chat.title}</span>
+                          <span className="text-[9px] opacity-30 flex-shrink-0">
+                            {chat.modelType === "reasoning" ? "🧠" : "⚡"}
+                          </span>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -275,7 +368,10 @@ export default function GeminiPage() {
 
                     {chats.length === 0 && (
                       <div className="px-3 py-10 text-center">
-                        <p className="text-white/25 text-[11px]" style={{ fontFamily: "var(--font-dm-sans)" }}>
+                        <p
+                          className="text-white/25 text-[11px]"
+                          style={{ fontFamily: "var(--font-dm-sans)" }}
+                        >
                           No conversations yet
                         </p>
                       </div>
@@ -284,9 +380,12 @@ export default function GeminiPage() {
 
                   {/* Sidebar Footer */}
                   <div className="p-3 border-t border-white/5">
-                    <div className="flex items-center gap-1.5 text-[10px] text-white/25" style={{ fontFamily: "var(--font-dm-sans)" }}>
+                    <div
+                      className="flex items-center gap-1.5 text-[10px] text-white/25"
+                      style={{ fontFamily: "var(--font-dm-sans)" }}
+                    >
                       <Sparkles className="w-3 h-3 text-purple-400/60" />
-                      Powered by Gemini AI
+                      Quantum AI Tutor
                     </div>
                   </div>
                 </div>
@@ -296,7 +395,7 @@ export default function GeminiPage() {
 
           {/* ── Main Chat Area ───────────────────────────────────── */}
           <div className="flex-1 flex flex-col min-w-0">
-            {/* Top bar with sidebar toggle */}
+            {/* Top bar with sidebar toggle + model selector */}
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5">
               {!sidebarOpen && (
                 <button
@@ -307,9 +406,46 @@ export default function GeminiPage() {
                   <PanelLeftOpen className="w-4 h-4" />
                 </button>
               )}
-              <span className="text-xs text-white/30" style={{ fontFamily: "var(--font-dm-sans)" }}>
+              <span
+                className="text-xs text-white/30 flex-1"
+                style={{ fontFamily: "var(--font-dm-sans)" }}
+              >
                 {activeChat ? activeChat.title : "New Conversation"}
               </span>
+
+              {/* Model Type Toggle */}
+              <div
+                className="flex items-center gap-1 p-0.5 rounded-lg"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                <button
+                  onClick={() => setModelType("fast")}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-medium transition-all ${
+                    modelType === "fast"
+                      ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/25"
+                      : "text-white/40 hover:text-white/60 border border-transparent"
+                  }`}
+                  style={{ fontFamily: "var(--font-dm-sans)" }}
+                >
+                  <Zap className="w-3 h-3" />
+                  Fast
+                </button>
+                <button
+                  onClick={() => setModelType("reasoning")}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-medium transition-all ${
+                    modelType === "reasoning"
+                      ? "bg-purple-500/15 text-purple-400 border border-purple-500/25"
+                      : "text-white/40 hover:text-white/60 border border-transparent"
+                  }`}
+                  style={{ fontFamily: "var(--font-dm-sans)" }}
+                >
+                  <FlaskConical className="w-3 h-3" />
+                  Reasoning
+                </button>
+              </div>
             </div>
 
             {/* Messages or Welcome */}
@@ -318,43 +454,39 @@ export default function GeminiPage() {
                 /* ── Active Chat Messages ────────────────────────── */
                 <div className="max-w-3xl mx-auto py-6 px-6">
                   <AnimatePresence>
-                    {messages.map((msg) => {
-                      const text = getMessageText(msg);
-                      if (!text && msg.role !== "user") return null;
-                      return (
-                        <motion.div
-                          key={msg.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3 }}
-                          className={`mb-6 flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                        >
-                          {msg.role === "assistant" && (
-                            <div className="flex-shrink-0 mr-3 mt-1">
-                              <div
-                                className="w-7 h-7 rounded-full flex items-center justify-center"
-                                style={{
-                                  background: "linear-gradient(135deg, rgba(168,85,247,0.25), rgba(34,211,238,0.25))",
-                                  border: "1px solid rgba(34,211,238,0.2)",
-                                }}
-                              >
-                                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                              </div>
+                    {currentMessages.map((msg) => (
+                      <motion.div
+                        key={msg.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className={`mb-6 flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                      >
+                        {msg.role === "assistant" && (
+                          <div className="flex-shrink-0 mr-3 mt-1">
+                            <div
+                              className="w-7 h-7 rounded-full flex items-center justify-center"
+                              style={{
+                                background: "linear-gradient(135deg, rgba(168,85,247,0.25), rgba(34,211,238,0.25))",
+                                border: "1px solid rgba(34,211,238,0.2)",
+                              }}
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
                             </div>
-                          )}
-                          <div
-                            className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                              msg.role === "user"
-                                ? "bg-purple-500/15 border border-purple-500/25 text-white"
-                                : "bg-white/4 border border-white/8 text-white/85"
-                            }`}
-                            style={{ fontFamily: "var(--font-dm-sans)" }}
-                          >
-                            {text}
                           </div>
-                        </motion.div>
-                      );
-                    })}
+                        )}
+                        <div
+                          className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                            msg.role === "user"
+                              ? "bg-purple-500/15 border border-purple-500/25 text-white"
+                              : "bg-white/4 border border-white/8 text-white/85"
+                          }`}
+                          style={{ fontFamily: "var(--font-dm-sans)" }}
+                        >
+                          {msg.content}
+                        </div>
+                      </motion.div>
+                    ))}
                   </AnimatePresence>
 
                   {/* Error banner */}
@@ -379,22 +511,14 @@ export default function GeminiPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-red-300 font-medium mb-1" style={{ fontFamily: "var(--font-dm-sans)" }}>
-                            {error.message.includes("quota")
-                              ? "API Quota Exceeded"
-                              : error.message.includes("API key")
-                                ? "API Key Issue"
-                                : "Something went wrong"}
+                            Something went wrong
                           </p>
                           <p className="text-xs text-red-300/70 leading-relaxed" style={{ fontFamily: "var(--font-dm-sans)" }}>
-                            {error.message.includes("quota")
-                              ? "You've used up your free Gemini API quota. It resets daily at midnight Pacific Time, or you can enable billing at aistudio.google.com for higher limits."
-                              : error.message.includes("API key")
-                                ? "Please check your GOOGLE_GENERATIVE_AI_API_KEY in .env.local."
-                                : error.message}
+                            {error}
                           </p>
                         </div>
                         <button
-                          onClick={() => clearError()}
+                          onClick={() => setError(null)}
                           className="flex-shrink-0 p-1 rounded hover:bg-white/10 text-red-400/60 hover:text-red-300 transition-colors"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -413,7 +537,13 @@ export default function GeminiPage() {
                       className="flex items-center gap-2 text-white/40 text-sm"
                       style={{ fontFamily: "var(--font-dm-sans)" }}
                     >
-                      <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(168,85,247,0.25), rgba(34,211,238,0.25))", border: "1px solid rgba(34,211,238,0.2)" }}>
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center"
+                        style={{
+                          background: "linear-gradient(135deg, rgba(168,85,247,0.25), rgba(34,211,238,0.25))",
+                          border: "1px solid rgba(34,211,238,0.2)",
+                        }}
+                      >
                         <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
                       </div>
                       <div className="flex gap-1">
@@ -451,14 +581,32 @@ export default function GeminiPage() {
                       className="text-2xl font-bold mb-2"
                       style={{ fontFamily: "var(--font-playfair)" }}
                     >
-                      Hi, I&apos;m <span className="text-purple-400">Gemini</span>
+                      Quantum <span className="text-purple-400">AI Tutor</span>
                     </h1>
                     <p
-                      className="text-white/40 text-sm mb-8"
+                      className="text-white/40 text-sm mb-4"
                       style={{ fontFamily: "var(--font-dm-sans)" }}
                     >
                       Your AI-powered quantum physics tutor. Ask me anything.
                     </p>
+
+                    {/* Model badge */}
+                    <div className="flex items-center justify-center gap-2 mb-8">
+                      <div
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px]"
+                        style={{
+                          background: "rgba(34,211,238,0.08)",
+                          border: "1px solid rgba(34,211,238,0.15)",
+                          fontFamily: "var(--font-dm-sans)",
+                        }}
+                      >
+                        <Zap className="w-3 h-3 text-cyan-400" />
+                        <span className="text-cyan-400">Groq Llama 3.3</span>
+                        <span className="text-white/30">•</span>
+                        <FlaskConical className="w-3 h-3 text-purple-400" />
+                        <span className="text-purple-400">Deepseek R1</span>
+                      </div>
+                    </div>
 
                     {/* Sample Prompts */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -478,7 +626,10 @@ export default function GeminiPage() {
                           <div className="text-purple-400 group-hover:text-cyan-400 transition-colors">
                             {prompt.icon}
                           </div>
-                          <span className="text-white/50 text-xs group-hover:text-white/70 transition-colors" style={{ fontFamily: "var(--font-dm-sans)" }}>
+                          <span
+                            className="text-white/50 text-xs group-hover:text-white/70 transition-colors"
+                            style={{ fontFamily: "var(--font-dm-sans)" }}
+                          >
                             {prompt.text}
                           </span>
                           <ArrowRight className="w-3 h-3 text-white/15 group-hover:text-cyan-400 transition-all ml-auto" />
@@ -531,7 +682,7 @@ export default function GeminiPage() {
                   className="text-center text-[10px] text-white/15 mt-2"
                   style={{ fontFamily: "var(--font-dm-sans)" }}
                 >
-                  Gemini can make mistakes. Verify important information.
+                  AI can make mistakes. Verify important information.
                 </p>
               </form>
             </div>

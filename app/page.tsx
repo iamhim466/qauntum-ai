@@ -27,7 +27,7 @@ const coreTopics = [
 
 const navLinks = [
   { label: "Home", href: "/" },
-  { label: "Gemini", href: "/gemini" },
+  { label: "Chat", href: "/chat" },
   { label: "Main Topics", href: "/#topics" },
   { label: "About", href: "/about" },
 ];
@@ -250,65 +250,7 @@ function HomeInner() {
           </motion.div>
         </section>
 
-        {/* -- Gemini Section ----------------------------------------- */}
-        <section className="relative py-32 px-12">
-          <div className="max-w-6xl mx-auto">
-            <ScrollReveal>
-              <h2
-                className="text-4xl font-bold mb-4 text-center"
-                style={{ fontFamily: "var(--font-playfair)" }}
-              >
-                Meet <span className="text-purple-400">Gemini</span>
-              </h2>
-              <p
-                className="text-gray-400 text-center max-w-2xl mx-auto mb-16"
-                style={{ fontFamily: "var(--font-dm-sans)" }}
-              >
-                Your AI-powered quantum physics tutor. Ask anything, from basic concepts to advanced quantum mechanics, and get clear, accurate explanations.
-              </p>
-            </ScrollReveal>
 
-            <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {[
-                {
-                  title: "Ask Anything",
-                  desc: "Type your question and get instant, accurate answers powered by advanced AI.",
-                  icon: "💡",
-                },
-                {
-                  title: "Visual Simulations",
-                  desc: "See quantum concepts come to life with interactive visualizations.",
-                  icon: "🔬",
-                },
-                {
-                  title: "Learn at Your Pace",
-                  desc: "From beginner to advanced - explanations adapt to your understanding.",
-                  icon: "📈",
-                },
-              ].map((item) => (
-                <motion.div
-                  key={item.title}
-                  variants={cardVariant}
-                  className="bg-white/5 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-8 hover:border-purple-500/40 transition-colors group"
-                >
-                  <div className="text-4xl mb-4">{item.icon}</div>
-                  <h3
-                    className="text-xl font-semibold mb-2 group-hover:text-purple-400 transition-colors"
-                    style={{ fontFamily: "var(--font-playfair)" }}
-                  >
-                    {item.title}
-                  </h3>
-                  <p
-                    className="text-gray-400 text-sm"
-                    style={{ fontFamily: "var(--font-dm-sans)" }}
-                  >
-                    {item.desc}
-                  </p>
-                </motion.div>
-              ))}
-            </StaggerContainer>
-          </div>
-        </section>
 
         {/* -- Main Topics Section ------------------------------------ */}
         <section id="topics" className="relative py-32 px-12 bg-black/50 backdrop-blur-sm">
@@ -400,7 +342,7 @@ function HomeInner() {
                 className="text-gray-500 text-sm"
                 style={{ fontFamily: "var(--font-dm-sans)" }}
               >
-                Built with Next.js, Framer Motion, and powered by Google Gemini AI.
+                Built with Next.js, Framer Motion, and Three.js.
               </p>
             </ScrollReveal>
 

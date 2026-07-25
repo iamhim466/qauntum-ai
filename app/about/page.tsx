@@ -88,13 +88,7 @@ const features = [
       "Explore quantum phenomena through handcrafted Three.js visualizations. Drag to orbit, click to measure, and watch superposition collapse in real time.",
     color: "#8b5cf6",
   },
-  {
-    icon: <Brain className="w-6 h-6" />,
-    title: "AI-Powered Tutoring",
-    description:
-      "Ask Gemini anything about quantum physics. Our AI tutor adapts to your level, from beginner analogies to advanced mathematical formulations.",
-    color: "#06b6d4",
-  },
+
   {
     icon: <Eye className="w-6 h-6" />,
     title: "Scrollytelling Experience",
@@ -143,8 +137,7 @@ const techStack = [
   { name: "Three.js", role: "3D Graphics", color: "#049ef4" },
   { name: "Framer Motion", role: "Animations", color: "#bb4bff" },
   { name: "Tailwind CSS", role: "Styling", color: "#06b6d4" },
-  { name: "Gemini AI", role: "AI Tutoring", color: "#4285f4" },
-  { name: "Vercel AI SDK", role: "Streaming Chat", color: "#ffffff" },
+
   { name: "TypeScript", role: "Type Safety", color: "#3178c6" },
 ];
 
@@ -167,7 +160,7 @@ const timeline = [
   {
     step: "04",
     title: "Ask the AI",
-    description: "Got questions? Chat with our Gemini-powered tutor for instant, personalized explanations.",
+    description: "Explore interactive 3D simulations to see quantum phenomena come alive.",
   },
 ];
 
@@ -262,16 +255,7 @@ export default function AboutPage() {
                 <ArrowRight className="w-4 h-4" />
               </motion.button>
             </Link>
-            <Link href="/gemini">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.97 }}
-                className="px-8 py-3.5 rounded-full border border-white/20 text-white font-semibold hover:bg-white/5 transition-colors flex items-center gap-2"
-                style={{ fontFamily: "var(--font-dm-sans)" }}
-              >
-                Try the AI Tutor
-              </motion.button>
-            </Link>
+
           </motion.div>
         </motion.div>
 
@@ -684,16 +668,7 @@ export default function AboutPage() {
                 <ArrowRight className="w-4 h-4" />
               </motion.button>
             </Link>
-            <Link href="/gemini">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.97 }}
-                className="px-10 py-4 rounded-full border-2 border-white/20 text-white font-semibold hover:bg-white/5 transition-colors flex items-center gap-2"
-                style={{ fontFamily: "var(--font-dm-sans)" }}
-              >
-                Chat with Gemini
-              </motion.button>
-            </Link>
+
           </div>
         </ScrollReveal>
       </section>
