@@ -16,8 +16,10 @@ import {
   ArrowRight,
   Zap,
   FlaskConical,
+  BookOpen,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import ArxivSearch from "@/components/ArxivSearch";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -35,6 +37,7 @@ interface StoredChat {
 }
 
 type ModelType = "fast" | "reasoning";
+type LevelType = "beginner" | "intermediate" | "advanced";
 
 // ── Sample prompts ─────────────────────────────────────────────
 
@@ -61,9 +64,15 @@ export default function ChatPage() {
   const [modelType, setModelType] = useState<ModelType>("fast");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showArxiv, setShowArxiv] = useState(false);
+  const [awaitingLevel, setAwaitingLevel] = useState(false);
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const [pendingModelType, setPendingModelType] = useState<ModelType>("fast");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const chatsRef = useRef(chats);
+  chatsRef.current = chats;
 
   const activeChat = chats.find((c) => c.id === activeChatId);
   const currentMessages = activeChat?.messages ?? [];
@@ -82,30 +91,9 @@ export default function ChatPage() {
     }
   }, [inputValue]);
 
-  // ── Streaming send ──────────────────────────────────────────
-  const handleSend = useCallback(
-    async (text?: string, overrideModelType?: ModelType) => {
-      const textToSend = (text ?? inputValue).trim();
-      if (!textToSend || isLoading) return;
-
-      setError(null);
-
-      let chatId = activeChatId;
-
-      // Create new chat if none active
-      if (!chatId) {
-        const newChat: StoredChat = {
-          id: generateId(),
-          title: textToSend.slice(0, 40) + (textToSend.length > 40 ? "..." : ""),
-          messages: [],
-          modelType,
-        };
-        setChats((prev) => [newChat, ...prev]);
-        chatId = newChat.id;
-        setActiveChatId(chatId);
-      }
-
-      const effectiveModelType = overrideModelType ?? modelType;
+  // ── Core send (calls the API with level) ──────────────────────
+  const sendToApi = useCallback(
+    async (chatId: string, textToSend: string, effectiveModelType: ModelType, level: LevelType) => {
       const userMsg: Message = { id: generateId(), role: "user", content: textToSend };
       const assistantMsg: Message = { id: generateId(), role: "assistant", content: "" };
 
@@ -118,11 +106,10 @@ export default function ChatPage() {
         )
       );
 
-      setInputValue("");
       setIsLoading(true);
 
-      // Build message history for API
-      const targetChat = chats.find((c) => c.id === chatId) ?? { messages: [] };
+      // Build message history for API (use ref to get latest chats)
+      const targetChat = chatsRef.current.find((c) => c.id === chatId) ?? { messages: [] };
       const apiMessages = [...targetChat.messages, userMsg].map((m) => ({
         role: m.role,
         content: m.content,
@@ -133,7 +120,7 @@ export default function ChatPage() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: apiMessages, modelType: effectiveModelType }),
+          body: JSON.stringify({ messages: apiMessages, modelType: effectiveModelType, level }),
           signal: abortRef.current.signal,
         });
 
@@ -240,19 +227,67 @@ export default function ChatPage() {
         abortRef.current = null;
       }
     },
-    [inputValue, isLoading, activeChatId, chats, modelType]
+    [chats]
   );
+
+  // ── Streaming send ──────────────────────────────────────────
+  const handleSend = useCallback(
+    async (text?: string, overrideModelType?: ModelType) => {
+      const textToSend = (text ?? inputValue).trim();
+      if (!textToSend || isLoading) return;
+
+      setError(null);
+      setInputValue("");
+
+      let chatId = activeChatId;
+
+      // Create new chat if none active
+      if (!chatId) {
+        const newChat: StoredChat = {
+          id: generateId(),
+          title: textToSend.slice(0, 40) + (textToSend.length > 40 ? "..." : ""),
+          messages: [],
+          modelType,
+        };
+        setChats((prev) => [newChat, ...prev]);
+        chatId = newChat.id;
+        setActiveChatId(chatId);
+      }
+
+      const effectiveModelType = overrideModelType ?? modelType;
+
+      // Show level picker first, then send after level is chosen
+      setPendingMessage(textToSend);
+      setPendingModelType(effectiveModelType);
+      setAwaitingLevel(true);
+    },
+    [inputValue, isLoading, activeChatId, modelType]
+  );
+
+  // ── Level selected → now actually send ──────────────────────
+  function handleLevelSelect(level: LevelType) {
+    if (!pendingMessage || !activeChatId) return;
+    const msg = pendingMessage;
+    const model = pendingModelType;
+    setAwaitingLevel(false);
+    setPendingMessage(null);
+    sendToApi(activeChatId, msg, model, level);
+  }
 
   // ── Chat actions ──────────────────────────────────────────
 
   function createNewChat() {
     setActiveChatId(null);
     setError(null);
+    setAwaitingLevel(false);
+    setPendingMessage(null);
   }
 
   function switchChat(chatId: string) {
     setActiveChatId(chatId);
     setError(null);
+    setAwaitingLevel(false);
+    setPendingMessage(null);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -277,6 +312,7 @@ export default function ChatPage() {
   // ── Render ──────────────────────────────────────────────────
 
   const hasMessages = activeChatId !== null && currentMessages.length > 0;
+  const showMessageArea = hasMessages || awaitingLevel;
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -326,67 +362,82 @@ export default function ChatPage() {
                     </button>
                   </div>
 
-                  {/* Chat History */}
-                  <div className="flex-1 overflow-y-auto px-2 pb-3">
-                    <div className="space-y-0.5">
-                      {chats.map((chat) => (
-                        <div
-                          key={chat.id}
-                          role="button"
-                          tabIndex={0}
-                          className={`w-full group flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all duration-200 cursor-pointer ${
-                            chat.id === activeChatId
-                              ? "bg-white/8 text-white"
-                              : "text-white/50 hover:bg-white/4 hover:text-white/70"
-                          }`}
-                          style={{ fontFamily: "var(--font-dm-sans)" }}
-                          onClick={() => switchChat(chat.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              switchChat(chat.id);
-                            }
-                          }}
-                        >
-                          <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 opacity-40" />
-                          <span className="truncate flex-1 text-left">{chat.title}</span>
-                          <span className="text-[9px] opacity-30 flex-shrink-0">
-                            {chat.modelType === "reasoning" ? "🧠" : "⚡"}
-                          </span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteChat(chat.id);
+                  {/* Chat History or arXiv Panel (mutually exclusive) */}
+                  {showArxiv ? (
+                    <div className="flex-1 overflow-hidden border-t border-white/5">
+                      <ArxivSearch />
+                    </div>
+                  ) : (
+                    <div className="flex-1 overflow-y-auto px-2 pb-3">
+                      <div className="space-y-0.5">
+                        {chats.map((chat) => (
+                          <div
+                            key={chat.id}
+                            role="button"
+                            tabIndex={0}
+                            className={`w-full group flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all duration-200 cursor-pointer ${
+                              chat.id === activeChatId
+                                ? "bg-white/8 text-white"
+                                : "text-white/50 hover:bg-white/4 hover:text-white/70"
+                            }`}
+                            style={{ fontFamily: "var(--font-dm-sans)" }}
+                            onClick={() => switchChat(chat.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                switchChat(chat.id);
+                              }
                             }}
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 transition-opacity"
                           >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-
-                    {chats.length === 0 && (
-                      <div className="px-3 py-10 text-center">
-                        <p
-                          className="text-white/25 text-[11px]"
-                          style={{ fontFamily: "var(--font-dm-sans)" }}
-                        >
-                          No conversations yet
-                        </p>
+                            <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 opacity-40" />
+                            <span className="truncate flex-1 text-left">{chat.title}</span>
+                            <span className="text-[9px] opacity-30 flex-shrink-0">
+                              {chat.modelType === "reasoning" ? "🧠" : "⚡"}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteChat(chat.id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 transition-opacity"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </div>
 
-                  {/* Sidebar Footer */}
-                  <div className="p-3 border-t border-white/5">
-                    <div
-                      className="flex items-center gap-1.5 text-[10px] text-white/25"
-                      style={{ fontFamily: "var(--font-dm-sans)" }}
-                    >
-                      <Sparkles className="w-3 h-3 text-purple-400/60" />
-                      Quantum AI Tutor
+                      {chats.length === 0 && (
+                        <div className="px-3 py-10 text-center">
+                          <p
+                            className="text-white/25 text-[11px]"
+                            style={{ fontFamily: "var(--font-dm-sans)" }}
+                          >
+                            No conversations yet
+                          </p>
+                        </div>
+                      )}
                     </div>
+                  )}
+
+                  {/* arXiv Search Toggle */}
+                  <div className="px-3 pb-2">
+                    <button
+                      onClick={() => setShowArxiv((v) => !v)}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-medium transition-all duration-200 hover:bg-white/5"
+                      style={{
+                        border: showArxiv
+                          ? "1px solid rgba(6,182,212,0.25)"
+                          : "1px solid rgba(255,255,255,0.06)",
+                        background: showArxiv ? "rgba(6,182,212,0.06)" : "transparent",
+                        fontFamily: "var(--font-dm-sans)",
+                      }}
+                    >
+                      <BookOpen className="w-3.5 h-3.5" style={{ color: showArxiv ? "#22d3ee" : "rgba(255,255,255,0.3)" }} />
+                      <span style={{ color: showArxiv ? "#67e8f9" : "rgba(255,255,255,0.45)" }}>
+                        arXiv Papers
+                      </span>
+                    </button>
                   </div>
                 </div>
               </motion.div>
@@ -450,7 +501,7 @@ export default function ChatPage() {
 
             {/* Messages or Welcome */}
             <div className="flex-1 overflow-y-auto">
-              {hasMessages ? (
+              {showMessageArea ? (
                 /* ── Active Chat Messages ────────────────────────── */
                 <div className="max-w-3xl mx-auto py-6 px-6">
                   <AnimatePresence>
@@ -529,8 +580,76 @@ export default function ChatPage() {
                     </motion.div>
                   )}
 
-                  {/* Typing indicator */}
-                  {isLoading && (
+                  {/* Level picker or Typing indicator */}
+                  {awaitingLevel ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mb-6 max-w-md mx-auto"
+                    >
+                      <div
+                        className="rounded-2xl p-5 border backdrop-blur-sm"
+                        style={{
+                          background: "rgba(168,85,247,0.06)",
+                          border: "1px solid rgba(168,85,247,0.2)",
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <p
+                            className="text-sm text-white/70"
+                            style={{ fontFamily: "var(--font-dm-sans)" }}
+                          >
+                            What&apos;s your experience level?
+                          </p>
+                          <button
+                            onClick={() => {
+                              setAwaitingLevel(false);
+                              setPendingMessage(null);
+                            }}
+                            className="text-white/25 hover:text-white/50 transition-colors p-1 rounded"
+                            title="Cancel"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          {([
+                            { level: "beginner" as LevelType, label: "Beginner", desc: "Simple analogies", color: "#10b981", emoji: "🌱" },
+                            { level: "intermediate" as LevelType, label: "Intermediate", desc: "Balanced depth", color: "#f59e0b", emoji: "📚" },
+                            { level: "advanced" as LevelType, label: "Advanced", desc: "Rigorous detail", color: "#ef4444", emoji: "🔬" },
+                          ]).map((opt) => (
+                            <motion.button
+                              key={opt.level}
+                              whileHover={{ scale: 1.04, y: -2 }}
+                              whileTap={{ scale: 0.97 }}
+                              onClick={() => handleLevelSelect(opt.level)}
+                              className="flex-1 flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl transition-all cursor-pointer"
+                              style={{
+                                background: `${opt.color}10`,
+                                border: `1px solid ${opt.color}30`,
+                              }}
+                            >
+                              <span className="text-lg">{opt.emoji}</span>
+                              <span
+                                className="text-xs font-semibold"
+                                style={{ color: opt.color, fontFamily: "var(--font-dm-sans)" }}
+                              >
+                                {opt.label}
+                              </span>
+                              <span
+                                className="text-[9px] text-white/30"
+                                style={{ fontFamily: "var(--font-dm-sans)" }}
+                              >
+                                {opt.desc}
+                              </span>
+                            </motion.button>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ) : isLoading ? (
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
@@ -552,7 +671,7 @@ export default function ChatPage() {
                         <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                       </div>
                     </motion.div>
-                  )}
+                  ) : null}
 
                   <div ref={messagesEndRef} />
                 </div>

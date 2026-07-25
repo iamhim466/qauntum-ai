@@ -347,7 +347,7 @@ export default function QuantumTunnelingShowcase() {
         if (particle) {
           particleAlphaRef.current = Math.max(0, 1 - elapsed * 3);
           (particle.material as THREE.MeshPhysicalMaterial).opacity = particleAlphaRef.current;
-          particle.material.transparent = true;
+          (particle.material as unknown as THREE.MeshPhysicalMaterial).transparent = true;
         }
 
         // Show transmitted particle emerging
@@ -403,7 +403,7 @@ export default function QuantumTunnelingShowcase() {
           particleAlphaRef.current = 1;
           if (particle) {
             particle.position.set(-3.5, 0, 0);
-            particle.material.transparent = false;
+            (particle.material as unknown as THREE.MeshPhysicalMaterial).transparent = false;
             (particle.material as THREE.MeshPhysicalMaterial).opacity = 1;
           }
           if (transmitted) {
