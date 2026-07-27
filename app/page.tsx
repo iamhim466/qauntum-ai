@@ -7,11 +7,12 @@ import {
   useScroll,
   useTransform,
 } from "framer-motion";
-import { ChevronDown, X, Sparkles, Atom, Brain, ArrowRight } from "lucide-react";
+import { ChevronDown, X, Sparkles, Atom, Brain, ArrowRight, Eye, Zap, Globe, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import QuantumBackground from "@/components/QuantumBackground";
 import Navbar from "@/components/Navbar";
+import DeepSeekSection from "@/components/DeepSeekSection";
 
 const coreTopics = [
   { slug: "superposition", title: "Superposition", desc: "Particles exist in multiple states simultaneously until measured." },
@@ -187,9 +188,9 @@ function HomeInner() {
               className="text-6xl font-extrabold mb-6"
               style={{ fontFamily: "var(--font-playfair)" }}
             >
-              Quantum Physics
+              Making Quantum Physics
               <br />
-              <span className="text-purple-400">Simplified</span>
+              <span className="bg-gradient-to-r from-purple-400 via-cyan-400 to-pink-400 bg-clip-text text-transparent">Accessible to All</span>
             </motion.h1>
 
             <motion.p
@@ -199,8 +200,9 @@ function HomeInner() {
               className="text-lg text-gray-400 max-w-xl"
               style={{ fontFamily: "var(--font-dm-sans)" }}
             >
-              Explore the fundamental building blocks of the universe through
-              interactive lessons, simulations, and AI-powered explanations.
+              An interactive learning platform that transforms the most
+              fascinating — and confusing — branch of physics into beautiful,
+              hands-on experiences powered by AI.
             </motion.p>
 
             {/* -- Start Learning Button -------------------- */}
@@ -252,72 +254,93 @@ function HomeInner() {
 
 
 
-        {/* -- Main Topics Section ------------------------------------ */}
+        {/* -- Features Section (from About page 4th section) ---- */}
         <section id="topics" className="relative py-32 px-12 bg-black/50 backdrop-blur-sm">
           <div className="max-w-6xl mx-auto">
             <ScrollReveal>
-              <h2
-                className="text-4xl font-bold mb-4 text-center"
-                style={{ fontFamily: "var(--font-playfair)" }}
-              >
-                Core <span className="text-purple-400">Topics</span>
-              </h2>
-              <p
-                className="text-gray-400 text-center max-w-2xl mx-auto mb-16"
+              <span
+                className="text-sm font-medium text-pink-400 tracking-wider uppercase mb-4 block text-center"
                 style={{ fontFamily: "var(--font-dm-sans)" }}
               >
-                Master the fundamental pillars of quantum physics through structured, interactive lessons.
-              </p>
+                Features
+              </span>
+              <h2
+                className="text-4xl font-bold mb-16 text-center"
+                style={{ fontFamily: "var(--font-playfair)" }}
+              >
+                Everything you need to{" "}<span className="text-pink-400">explore quantum</span>
+              </h2>
             </ScrollReveal>
 
-            <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
                 {
-                  title: "Wave-Particle Duality",
-                  desc: "Explore how light and matter exhibit both wave and particle properties.",
-                  gradient: "from-purple-500/20 to-cyan-500/20",
+                  icon: <Atom className="w-6 h-6" />,
+                  title: "Interactive 3D Simulations",
+                  description: "Explore quantum phenomena through handcrafted Three.js visualizations. Drag to orbit, click to measure, and watch superposition collapse in real time.",
+                  color: "#8b5cf6",
                 },
                 {
-                  title: "Quantum Superposition",
-                  desc: "Understand how particles exist in multiple states simultaneously.",
-                  gradient: "from-cyan-500/20 to-purple-500/20",
+                  icon: <Eye className="w-6 h-6" />,
+                  title: "Scrollytelling Experience",
+                  description: "Immersive scroll-driven narratives that guide you through each concept, seamlessly transitioning between 2D simulations and 3D interactive showcases.",
+                  color: "#ec4899",
                 },
                 {
-                  title: "Quantum Entanglement",
-                  desc: "Discover the mysterious connection between entangled particles.",
-                  gradient: "from-purple-500/20 to-pink-500/20",
+                  icon: <BookOpen className="w-6 h-6" />,
+                  title: "Structured Learning Paths",
+                  description: "Nine core topics covering the essential pillars of quantum mechanics, each with curated content, key concepts, and real-world examples.",
+                  color: "#10b981",
                 },
                 {
-                  title: "Schrödinger's Equation",
-                  desc: "Dive into the mathematical framework of quantum mechanics.",
-                  gradient: "from-pink-500/20 to-cyan-500/20",
+                  icon: <Zap className="w-6 h-6" />,
+                  title: "Real-Time Particle Physics",
+                  description: "The homepage background uses spatial-hashed particle physics with mouse interaction, entanglement beams, and wave connections.",
+                  color: "#f59e0b",
                 },
-              ].map((topic) => (
+                {
+                  icon: <Globe className="w-6 h-6" />,
+                  title: "Accessible to Everyone",
+                  description: "No physics degree required. We break down complex quantum concepts into intuitive explanations with analogies, visuals, and progressive depth.",
+                  color: "#6366f1",
+                },
+              ].map((feature) => (
                 <motion.div
-                  key={topic.title}
+                  key={feature.title}
                   variants={cardVariant}
-                  className={`bg-gradient-to-br ${topic.gradient} border border-white/10 rounded-2xl p-8 hover:border-purple-500/30 transition-all cursor-pointer group`}
+                  whileHover={{ y: -4, borderColor: `${feature.color}40` }}
+                  className="p-7 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-all group"
                 >
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform"
+                    style={{
+                      backgroundColor: `${feature.color}15`,
+                      border: `1px solid ${feature.color}30`,
+                      color: feature.color,
+                    }}
+                  >
+                    {feature.icon}
+                  </div>
                   <h3
-                    className="text-2xl font-bold mb-3 group-hover:text-purple-400 transition-colors"
+                    className="text-lg font-bold mb-2"
                     style={{ fontFamily: "var(--font-playfair)" }}
                   >
-                    {topic.title}
+                    {feature.title}
                   </h3>
                   <p
-                    className="text-gray-400"
+                    className="text-gray-400 text-sm leading-relaxed"
                     style={{ fontFamily: "var(--font-dm-sans)" }}
                   >
-                    {topic.desc}
+                    {feature.description}
                   </p>
-                  <div className="mt-4 text-purple-400 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                    Explore topic →
-                  </div>
                 </motion.div>
               ))}
             </StaggerContainer>
           </div>
         </section>
+
+        {/* -- DeepSeek AI Section (3rd section) ------------------ */}
+        <DeepSeekSection />
 
         {/* -- About Section ----------------------------------------- */}
         <section className="relative py-32 px-12">
