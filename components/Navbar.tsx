@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -17,19 +18,26 @@ interface NavbarProps {
 
 export default function Navbar({ onMainTopics }: NavbarProps) {
   const pathname = usePathname();
-
   const isHome = pathname === "/";
+  const [scrolled, setScrolled] = useState(false);
+  const { scrollY } = useScroll();
+
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    setScrolled(latest > 50);
+  });
 
   return (
     <motion.header
       initial={{ y: -60, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="fixed top-0 left-0 right-0 z-50 px-6 pt-3"
+      className="fixed top-0 left-0 right-0 z-50 px-6 transition-all duration-500"
+      style={{ paddingTop: scrolled ? "12px" : "20px" }}
     >
       <div
-        className="mx-auto max-w-6xl flex justify-between items-center rounded-xl px-5 py-2 transition-all duration-500 ease-in-out"
+        className="mx-auto max-w-6xl flex justify-between items-center rounded-xl transition-all duration-500 ease-in-out"
         style={{
+          padding: scrolled ? "8px 20px" : "14px 28px",
           background: "rgba(0, 20, 30, 0.55)",
           backdropFilter: "blur(16px) saturate(180%)",
           WebkitBackdropFilter: "blur(16px) saturate(180%)",
@@ -40,8 +48,9 @@ export default function Navbar({ onMainTopics }: NavbarProps) {
         {/* Logo Group - Left */}
         <Link href="/" className="flex items-baseline">
           <span
-            className="font-extrabold tracking-tight transition-all duration-500 ease-in-out text-base"
+            className="font-extrabold tracking-tight transition-all duration-500 ease-in-out"
             style={{
+              fontSize: scrolled ? "16px" : "22px",
               fontFamily: "var(--font-playfair)",
               color: "white",
               textShadow: "0 0 16px rgba(34, 211, 238, 0.3)",
@@ -50,8 +59,9 @@ export default function Navbar({ onMainTopics }: NavbarProps) {
             Quantum
           </span>
           <span
-            className="whitespace-nowrap font-bold tracking-normal ml-1.5 text-sm transition-all duration-500 ease-in-out"
+            className="whitespace-nowrap font-bold tracking-normal transition-all duration-500 ease-in-out ml-1.5"
             style={{
+              fontSize: scrolled ? "14px" : "18px",
               fontFamily: "var(--font-great-vibes)",
               color: "#a855f7",
               textShadow: "0 0 12px rgba(168, 85, 247, 0.5)",
@@ -67,25 +77,25 @@ export default function Navbar({ onMainTopics }: NavbarProps) {
           style={{ fontFamily: "var(--font-dm-sans)" }}
         >
           {navLinks.map((link) => {
-            // Main Topics: on home page use callback, otherwise navigate to home with query param
             if (link.label === "Main Topics") {
               if (isHome && onMainTopics) {
                 return (
                   <button
                     key={link.label}
                     onClick={onMainTopics}
-                    className="relative px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300 text-white/70 hover:text-white hover:bg-white/10"
+                    className="relative px-3 py-1.5 font-medium rounded-full transition-all duration-300 text-white/70 hover:text-white hover:bg-white/10"
+                    style={{ fontSize: scrolled ? "12px" : "14px" }}
                   >
                     {link.label}
                   </button>
                 );
               }
-              // On other pages, navigate to home with query param
               return (
                 <Link
                   key={link.label}
                   href={link.href}
-                  className="relative px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300 text-white/70 hover:text-white hover:bg-white/10"
+                  className="relative px-3 py-1.5 font-medium rounded-full transition-all duration-300 text-white/70 hover:text-white hover:bg-white/10"
+                  style={{ fontSize: scrolled ? "12px" : "14px" }}
                 >
                   {link.label}
                 </Link>
@@ -95,11 +105,12 @@ export default function Navbar({ onMainTopics }: NavbarProps) {
               <Link
                 key={link.label}
                 href={link.href}
-                className={`relative px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-300 ${
+                className={`relative px-3 py-1.5 font-medium rounded-full transition-all duration-300 ${
                   pathname === link.href
                     ? "text-white bg-white/10"
                     : "text-white/70 hover:text-white hover:bg-white/10"
                 }`}
+                style={{ fontSize: scrolled ? "12px" : "14px" }}
               >
                 {link.label}
               </Link>

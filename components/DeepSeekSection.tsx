@@ -42,7 +42,7 @@ export default function DeepSeekSection() {
   }
 
   return (
-    <section className="relative py-32 px-6 bg-white/[0.02]">
+    <section className="relative py-16 px-6 bg-white/[0.02]">
       <div className="max-w-7xl mx-auto">
         {/* ── Section Header ─────────────────────────────────── */}
         <motion.div
@@ -50,7 +50,7 @@ export default function DeepSeekSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
-          className="text-center mb-16"
+          className="text-center mb-8"
         >
           <span
             className="text-sm font-medium text-purple-400 tracking-wider uppercase mb-4 block"
@@ -89,10 +89,10 @@ export default function DeepSeekSection() {
               delay: 0.1,
               ease: [0.25, 0.46, 0.45, 0.94],
             }}
-            className="space-y-6"
+            className="space-y-4"
           >
             {/* What is DeepSeek */}
-            <div className="p-6 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-all">
+            <div className="p-4 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-all">
               <div className="flex items-center gap-3 mb-4">
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center"
@@ -114,19 +114,17 @@ export default function DeepSeekSection() {
                 className="text-gray-400 text-sm leading-relaxed"
                 style={{ fontFamily: "var(--font-dm-sans)" }}
               >
-                DeepSeek R1 is an advanced AI reasoning model developed by
-                DeepSeek, a leading AI research lab. Unlike standard language
-                models that generate answers instantly, R1 uses a{" "}
+                DeepSeek R1 is an advanced AI reasoning model that uses a{" "}
                 <strong className="text-white/80">
                   chain-of-thought reasoning process
                 </strong>{" "}
-                — it thinks step-by-step before arriving at an answer, making it
+                — it thinks step-by-step before answering, making it
                 exceptionally good at complex scientific questions.
               </p>
             </div>
 
             {/* Why it matters for quantum */}
-            <div className="p-6 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-all">
+            <div className="p-4 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-all">
               <div className="flex items-center gap-3 mb-4">
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center"
@@ -149,11 +147,10 @@ export default function DeepSeekSection() {
                 style={{ fontFamily: "var(--font-dm-sans)" }}
               >
                 Quantum physics requires careful, layered thinking. DeepSeek R1
-                excels at breaking down complex concepts like entanglement,
+                excels at breaking down concepts like entanglement,
                 superposition, and wave functions into clear, step-by-step
-                explanations. It can walk through mathematical derivations,
-                compare interpretations, and connect abstract theory to real
-                experiments — all with the depth a curious mind deserves.
+                explanations — connecting abstract theory to real experiments
+                with the depth a curious mind deserves.
               </p>
             </div>
 
@@ -204,20 +201,6 @@ export default function DeepSeekSection() {
               ))}
             </div>
 
-            {/* CTA */}
-            <div className="pt-2">
-              <a href="/chat">
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="flex items-center gap-2 px-6 py-3 rounded-full border border-purple-500/30 text-purple-400 text-sm font-medium hover:bg-purple-500/10 transition-colors cursor-pointer"
-                  style={{ fontFamily: "var(--font-dm-sans)" }}
-                >
-                  Open Full Chat
-                  <ArrowRight className="w-4 h-4" />
-                </motion.button>
-              </a>
-            </div>
           </motion.div>
 
           {/* ── Right: Chat Preview Widget (visual only) ──────── */}
@@ -255,7 +238,7 @@ export default function DeepSeekSection() {
             <div
               className="relative rounded-3xl overflow-hidden flex flex-col cursor-default"
               style={{
-                height: "560px",
+                height: "440px",
                 background: "rgba(8, 12, 20, 0.85)",
                 border: "1px solid rgba(168, 85, 247, 0.15)",
                 boxShadow:
@@ -406,6 +389,21 @@ export default function DeepSeekSection() {
                   <Send className="w-3.5 h-3.5 text-white/15" />
                 </div>
               </div>
+            </div>
+
+            {/* CTA centered below chat widget */}
+            <div className="text-center mt-3">
+              <a href="/chat">
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-purple-500/30 text-purple-400 text-sm font-medium hover:bg-purple-500/10 transition-colors cursor-pointer"
+                  style={{ fontFamily: "var(--font-dm-sans)" }}
+                >
+                  Open Full Chat
+                  <ArrowRight className="w-4 h-4" />
+                </motion.button>
+              </a>
             </div>
           </motion.div>
         </div>

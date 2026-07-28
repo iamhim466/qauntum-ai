@@ -10,7 +10,8 @@ import {
 import { ChevronDown, X, Sparkles, Atom, Brain, ArrowRight, Eye, Zap, Globe, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import QuantumBackground from "@/components/QuantumBackground";
+import dynamic from "next/dynamic";
+const QuantumBackground = dynamic(() => import("@/components/QuantumBackground"), { ssr: false });
 import Navbar from "@/components/Navbar";
 import DeepSeekSection from "@/components/DeepSeekSection";
 
@@ -255,7 +256,7 @@ function HomeInner() {
 
 
         {/* -- Features Section (from About page 4th section) ---- */}
-        <section id="topics" className="relative py-32 px-12 bg-black/50 backdrop-blur-sm">
+        <section id="topics" className="relative py-16 px-6 bg-black/50 backdrop-blur-sm">
           <div className="max-w-6xl mx-auto">
             <ScrollReveal>
               <span
@@ -265,7 +266,7 @@ function HomeInner() {
                 Features
               </span>
               <h2
-                className="text-4xl font-bold mb-16 text-center"
+                className="text-4xl font-bold mb-8 text-center"
                 style={{ fontFamily: "var(--font-playfair)" }}
               >
                 Everything you need to{" "}<span className="text-pink-400">explore quantum</span>
@@ -277,31 +278,31 @@ function HomeInner() {
                 {
                   icon: <Atom className="w-6 h-6" />,
                   title: "Interactive 3D Simulations",
-                  description: "Explore quantum phenomena through handcrafted Three.js visualizations. Drag to orbit, click to measure, and watch superposition collapse in real time.",
+                  description: "Handcrafted Three.js visualizations you can orbit, measure, and interact with in real time.",
                   color: "#8b5cf6",
                 },
                 {
                   icon: <Eye className="w-6 h-6" />,
                   title: "Scrollytelling Experience",
-                  description: "Immersive scroll-driven narratives that guide you through each concept, seamlessly transitioning between 2D simulations and 3D interactive showcases.",
+                  description: "Scroll-driven narratives that transition seamlessly between 2D simulations and 3D showcases.",
                   color: "#ec4899",
                 },
                 {
                   icon: <BookOpen className="w-6 h-6" />,
                   title: "Structured Learning Paths",
-                  description: "Nine core topics covering the essential pillars of quantum mechanics, each with curated content, key concepts, and real-world examples.",
+                  description: "Nine core topics with curated content, key concepts, and real-world examples.",
                   color: "#10b981",
                 },
                 {
                   icon: <Zap className="w-6 h-6" />,
                   title: "Real-Time Particle Physics",
-                  description: "The homepage background uses spatial-hashed particle physics with mouse interaction, entanglement beams, and wave connections.",
+                  description: "Spatial-hashed particle background with mouse interaction, beams, and wave connections.",
                   color: "#f59e0b",
                 },
                 {
                   icon: <Globe className="w-6 h-6" />,
                   title: "Accessible to Everyone",
-                  description: "No physics degree required. We break down complex quantum concepts into intuitive explanations with analogies, visuals, and progressive depth.",
+                  description: "No physics degree required — just intuitive explanations, analogies, and visuals.",
                   color: "#6366f1",
                 },
               ].map((feature) => (
@@ -309,10 +310,10 @@ function HomeInner() {
                   key={feature.title}
                   variants={cardVariant}
                   whileHover={{ y: -4, borderColor: `${feature.color}40` }}
-                  className="p-7 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-all group"
+                  className="p-5 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-all group"
                 >
                   <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform"
+                    className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"
                     style={{
                       backgroundColor: `${feature.color}15`,
                       border: `1px solid ${feature.color}30`,
