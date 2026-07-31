@@ -42,14 +42,14 @@ export default function DeepSeekSection() {
   }
 
   return (
-    <section className="relative py-16 px-6 bg-white/[0.02]">
+    <section className="scroll-section relative py-16 px-6 bg-white/[0.02]">
       <div className="max-w-7xl mx-auto">
         {/* ── Section Header ─────────────────────────────────── */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
+          initial={{ opacity: 0, scale: 0.97 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true, margin: "100px" }}
+          transition={{ duration: 1.4, ease: [0.25, 0.46, 0.45, 0.94] }}
           className="text-center mb-8"
         >
           <span
@@ -81,12 +81,12 @@ export default function DeepSeekSection() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
           {/* ── Left: DeepSeek Explainer ─────────────────────── */}
           <motion.div
-            initial={{ opacity: 0, x: -40 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
+            initial={{ opacity: 0, scale: 0.97 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true, margin: "100px" }}
             transition={{
-              duration: 0.7,
-              delay: 0.1,
+              duration: 1.4,
+              delay: 0.15,
               ease: [0.25, 0.46, 0.45, 0.94],
             }}
             className="space-y-4"
@@ -205,12 +205,12 @@ export default function DeepSeekSection() {
 
           {/* ── Right: Chat Preview Widget (visual only) ──────── */}
           <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
+            initial={{ opacity: 0, scale: 0.97 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true, margin: "100px" }}
             transition={{
-              duration: 0.7,
-              delay: 0.2,
+              duration: 1.4,
+              delay: 0.3,
               ease: [0.25, 0.46, 0.45, 0.94],
             }}
             onMouseMove={handleMouseMove}

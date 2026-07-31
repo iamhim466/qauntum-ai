@@ -7,7 +7,7 @@ import {
   useScroll,
   useTransform,
 } from "framer-motion";
-import { ChevronDown, X, Sparkles, Atom, Brain, ArrowRight, Eye, Zap, Globe, BookOpen } from "lucide-react";
+import { ChevronDown, X, Sparkles, Atom, Brain, ArrowRight, Eye, Zap, Globe, BookOpen, Rocket } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -47,11 +47,11 @@ function ScrollReveal({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-80px" }}
+      initial={{ opacity: 0, scale: 0.97 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true, margin: "100px" }}
       transition={{
-        duration: 0.7,
+        duration: 1.4,
         delay,
         ease: [0.25, 0.46, 0.45, 0.94],
       }}
@@ -75,9 +75,9 @@ function StaggerContainer({
     <motion.div
       initial="hidden"
       whileInView="visible"
-      viewport={{ once: true, margin: "-60px" }}
+      viewport={{ once: true, margin: "100px" }}
       variants={{
-        visible: { transition: { staggerChildren: 0.12 } },
+        visible: { transition: { staggerChildren: 0.25 } },
       }}
       className={className}
     >
@@ -87,22 +87,21 @@ function StaggerContainer({
 }
 
 const cardVariant = {
-  hidden: { opacity: 0, y: 40, scale: 0.96 },
+  hidden: { opacity: 0, scale: 0.96 },
   visible: {
     opacity: 1,
-    y: 0,
     scale: 1,
-    transition: { duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] as const },
+    transition: { duration: 1.2, ease: [0.25, 0.46, 0.45, 0.94] as const },
   },
 };
 
 // -- Overlay Card Variant (staggered entrance) -------------------
 
 const overlayCardVariant = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, scale: 0.97 },
   visible: {
     opacity: 1,
-    y: 0,
+    scale: 1,
     transition: { type: "spring" as const, stiffness: 260, damping: 20 },
   },
 };
@@ -172,7 +171,7 @@ function HomeInner() {
       {/* -- Content Sections ----------------------------------------- */}
       <div className="relative z-10">
         {/* Hero Section with Parallax */}
-        <section className="relative h-screen overflow-hidden flex flex-col items-center justify-center">
+        <section className="scroll-section relative h-screen overflow-hidden flex flex-col items-center justify-center">
           {/* Hero content with parallax fade + float */}
           <motion.div
             animate={{ opacity: isExpanded ? 0 : 1 }}
@@ -192,6 +191,17 @@ function HomeInner() {
               Making Quantum Physics
               <br />
               <span className="bg-gradient-to-r from-purple-400 via-cyan-400 to-pink-400 bg-clip-text text-transparent">Accessible to All</span>
+              <br />
+              <span
+                style={{
+                  fontFamily: "var(--font-great-vibes)",
+                  color: "#a855f7",
+                  textShadow: "0 0 12px rgba(168, 85, 247, 0.5)",
+                  fontSize: "0.75em",
+                }}
+              >
+                The Easy Way
+              </span>
             </motion.h1>
 
             <motion.p
@@ -256,7 +266,7 @@ function HomeInner() {
 
 
         {/* -- Features Section (from About page 4th section) ---- */}
-        <section id="topics" className="relative py-16 px-6 bg-black/50 backdrop-blur-sm">
+        <section id="topics" className="scroll-section relative py-16 px-6 bg-black/50 backdrop-blur-sm">
           <div className="max-w-6xl mx-auto">
             <ScrollReveal>
               <span
@@ -343,48 +353,51 @@ function HomeInner() {
         {/* -- DeepSeek AI Section (3rd section) ------------------ */}
         <DeepSeekSection />
 
-        {/* -- About Section ----------------------------------------- */}
-        <section className="relative py-32 px-12">
-          <div className="max-w-4xl mx-auto text-center">
-            <ScrollReveal>
-              <h2
-                className="text-4xl font-bold mb-6"
-                style={{ fontFamily: "var(--font-playfair)" }}
-              >
-                About <span className="text-purple-400">Quantum</span>
-              </h2>
-              <p
-                className="text-gray-400 text-lg leading-relaxed mb-8"
-                style={{ fontFamily: "var(--font-dm-sans)" }}
-              >
-                Quantum: The Easy Way is an interactive learning platform designed to make quantum physics
-                accessible to everyone. Whether you&apos;re a curious student, a passionate educator, or
-                simply someone who wants to understand the universe at its deepest level, our AI-powered
-                tools and visual simulations will guide you on your journey.
-              </p>
-              <p
-                className="text-gray-500 text-sm"
-                style={{ fontFamily: "var(--font-dm-sans)" }}
-              >
-                Built with Next.js, Framer Motion, and Three.js.
-              </p>
-            </ScrollReveal>
+        {/* -- Final CTA Section --------------------------------------- */}
+        <section className="scroll-section relative py-32 px-6 overflow-hidden">
+          {/* Gradient bg */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(ellipse at 50% 80%, rgba(139,92,246,0.15) 0%, transparent 60%)",
+            }}
+          />
 
-            <ScrollReveal delay={0.2}>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.97 }}
-                className="mt-12 px-10 py-4 rounded-full bg-purple-500 text-white font-semibold hover:bg-purple-600 transition-colors shadow-lg shadow-purple-500/25"
-                style={{ fontFamily: "var(--font-dm-sans)" }}
-              >
-                Start Learning Now
-              </motion.button>
-            </ScrollReveal>
-          </div>
+          <ScrollReveal className="relative z-10 text-center max-w-3xl mx-auto">
+            <Rocket className="w-10 h-10 text-purple-400 mx-auto mb-6" />
+            <h2
+              className="text-4xl md:text-5xl font-bold mb-6"
+              style={{ fontFamily: "var(--font-playfair)" }}
+            >
+              Ready to explore the{" "}
+              <span className="text-purple-400">quantum world</span>?
+            </h2>
+            <p
+              className="text-gray-400 text-lg mb-10 max-w-xl mx-auto"
+              style={{ fontFamily: "var(--font-dm-sans)" }}
+            >
+              Dive into nine interactive topics, play with 3D simulations, and
+              ask our AI tutor anything. Your quantum journey starts now.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/?open-topics=true">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="px-10 py-4 rounded-full bg-purple-500 text-white font-semibold hover:bg-purple-600 transition-colors shadow-lg shadow-purple-500/25 flex items-center gap-2"
+                  style={{ fontFamily: "var(--font-dm-sans)" }}
+                >
+                  Begin Your Journey
+                  <ArrowRight className="w-4 h-4" />
+                </motion.button>
+              </Link>
+            </div>
+          </ScrollReveal>
         </section>
 
         {/* -- Footer ------------------------------------------------ */}
-        <footer className="relative py-8 px-12 border-t border-white/10">
+        <footer className="scroll-section relative py-8 px-12 border-t border-white/10">
           <div className="max-w-6xl mx-auto flex justify-between items-center">
             <p
               className="text-gray-500 text-sm"

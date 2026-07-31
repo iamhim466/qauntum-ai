@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* ── Prevent white flash during page transitions ─────────── */
+html,
+body {
+  background-color: #000000;
+}
+
 /* ── Global scrollbar: dark theme ───────────────────────────── */
 ::-webkit-scrollbar {
   width: 8px;
@@ -31,4 +37,14 @@ body.scroll-locked {
 
 body.scroll-locked > *:not(.scroll-lock-exempt) {
   overflow: hidden !important;
+}
+
+/* ── Scroll snap for slow reveal sections ──────────────────── */
+html {
+  scroll-snap-type: y proximity;
+}
+
+.scroll-section {
+  scroll-snap-align: start;
+  scroll-snap-stop: normal;
 }
