@@ -38,7 +38,7 @@ export default function QuantumComputingShowcase() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.5;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -87,7 +87,7 @@ export default function QuantumComputingShowcase() {
         new THREE.Path().absarc(0, 0, r, 0, Math.PI * 2, false).getPoints(64)
           .map((p) => new THREE.Vector3(p.x, y, p.y))
       );
-      scene.add(new THREE.Line(ringGeo, new THREE.LineBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.12 })));
+      scene.add(new THREE.Line(ringGeo, new THREE.LineBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.35 })));
     }
 
     // Meridian lines
@@ -104,12 +104,12 @@ export default function QuantumComputingShowcase() {
       }
       scene.add(new THREE.Line(
         new THREE.BufferGeometry().setFromPoints(pts),
-        new THREE.LineBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.08 })
+        new THREE.LineBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.25 })
       ));
     }
 
     // ── Axes ────────────────────────────────────────────────
-    const axisMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.15 });
+    const axisMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 });
     const axLen = R + 0.6;
     // Z
     scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([

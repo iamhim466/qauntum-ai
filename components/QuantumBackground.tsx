@@ -24,17 +24,23 @@ interface Entanglement {
 // ── Constants ──────────────────────────────────────────────────
 
 const COLORS = ["#a855f7", "#00f3ff", "#ffffff"] as const;
-const WAVE_THRESHOLD = 170;
-const OBSERVER_THRESHOLD = 220;
+const WAVE_THRESHOLD = 240;
+const OBSERVER_THRESHOLD = 300;
 const MOUSE_ATTRACT_RADIUS = 250;
 const MOUSE_ATTRACT_STRENGTH = 0.035;
 const MOUSE_GLOW_RADIUS = 60;
 const PARTICLE_MIN_R = 1.5;
 const PARTICLE_MAX_R = 4.5;
-const PARTICLE_COUNT_BASE = 120;
-const PARTICLE_COUNT_MAX = 250;
+const PARTICLE_COUNT_BASE = 160;
+const PARTICLE_COUNT_MAX = 320;
 const ENTANGLEMENT_INTERVAL = 4000;
 const ENTANGLEMENT_DECAY_SPEED = 0.012;
+const LINK_ATTRACT_STRENGTH = 0.003;
+const LINK_ATTRACT_MIN_DIST = 60;
+const REPEL_RADIUS = 60;
+const REPEL_STRENGTH = 0.3;
+const SCATTER_INTERVAL = 4000;
+const SCATTER_STRENGTH = 3.0;
 const GRID_CELL_SIZE = WAVE_THRESHOLD;
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -105,6 +111,7 @@ export default function QuantumBackground() {
   const entanglementsRef = useRef<Entanglement[]>([]);
   const rafRef = useRef<number>(0);
   const lastEntanglementRef = useRef(0);
+  const lastScatterRef = useRef(0);
 
   const visibleRef = useRef(true);    const animate = useCallback((timestamp: number) => {
     const canvas = canvasRef.current;
@@ -140,6 +147,34 @@ export default function QuantumBackground() {
       entanglementsRef.current.push({ a, b, progress: 0 });
     }
 
+    // ── Periodic scatter burst (every 4s) — push ALL particles away from neighbors ─
+    if (timestamp - lastScatterRef.current > SCATTER_INTERVAL) {
+      lastScatterRef.current = timestamp;
+      const scatterGrid = buildSpatialGrid(particles, cW, cH);
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        const neighbors = getNeighborIndices(p.x, p.y, scatterGrid);
+        // Push away from ALL nearby neighbors, not just the closest
+        let pushVx = 0;
+        let pushVy = 0;
+        for (let n = 0; n < neighbors.length; n++) {
+          const j = neighbors[n];
+          if (j === i) continue;
+          const other = particles[j];
+          const dx = other.x - p.x;
+          const dy = other.y - p.y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < LINK_ATTRACT_MIN_DIST && d > 0.1) {
+            const pushStrength = SCATTER_STRENGTH * (1 - d / LINK_ATTRACT_MIN_DIST);
+            pushVx -= (dx / d) * pushStrength;
+            pushVy -= (dy / d) * pushStrength;
+          }
+        }
+        p.vx += pushVx;
+        p.vy += pushVy;
+      }
+    }
+
     // Build spatial grid once per frame
     const grid = buildSpatialGrid(particles, cW, cH);
 
@@ -171,7 +206,7 @@ export default function QuantumBackground() {
         p.r += (p.baseR - p.r) * 0.08;
       }
 
-      // ── Minimal inter-particle repel (prevent overlap only) ─
+      // ── Inter-particle forces: repel up close, attract at range ─
       const neighbors = getNeighborIndices(p.x, p.y, grid);
       for (let n = 0; n < neighbors.length; n++) {
         const j = neighbors[n];
@@ -180,21 +215,28 @@ export default function QuantumBackground() {
         const dx = other.x - p.x;
         const dy = other.y - p.y;
         const d = Math.sqrt(dx * dx + dy * dy);
-        if (d < 14 && d > 0.1) {
-          // Soft repel to avoid stacking
-          const repel = 0.06 * (1 - d / 14);
+        if (d < REPEL_RADIUS && d > 0.1) {
+          // Strong repel — pushes particles apart across the page to prevent clustering
+          const falloff = 1 - d / REPEL_RADIUS;
+          const repel = REPEL_STRENGTH * falloff * falloff;
           p.vx -= (dx / d) * repel;
           p.vy -= (dy / d) * repel;
+        } else if (d > LINK_ATTRACT_MIN_DIST && d < WAVE_THRESHOLD) {
+          // Soft attraction — connecting lines pull particles together
+          const falloff = 1 - d / WAVE_THRESHOLD;
+          const attract = LINK_ATTRACT_STRENGTH * falloff * falloff;
+          p.vx += (dx / d) * attract;
+          p.vy += (dy / d) * attract;
         }
       }
 
-      // Subtle random turbulence
-      p.vx += (Math.random() - 0.5) * 0.1;
-      p.vy += (Math.random() - 0.5) * 0.1;
+      // Random turbulence — keeps particles drifting naturally
+      p.vx += (Math.random() - 0.5) * 0.25;
+      p.vy += (Math.random() - 0.5) * 0.25;
 
       // Damping
-      p.vx *= 0.995;
-      p.vy *= 0.995;
+      p.vx *= 0.997;
+      p.vy *= 0.997;
 
       // Move
       p.x += p.vx;

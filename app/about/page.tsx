@@ -1,21 +1,16 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Atom,
-  Brain,
-  Sparkles,
   Eye,
   Zap,
   Globe,
   BookOpen,
-  Code2,
   Rocket,
   ArrowRight,
-  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
-import { useRef } from "react";
 import Navbar from "@/components/Navbar";
 
 // ── Animation Wrappers ─────────────────────────────────────────
@@ -167,119 +162,9 @@ const timeline = [
 // ── Page ───────────────────────────────────────────────────────
 
 export default function AboutPage() {
-  const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: heroRef,
-    offset: ["start start", "end start"],
-  });
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
-  const heroY = useTransform(scrollYProgress, [0, 0.8], [0, -60]);
-
   return (
     <div className="min-h-screen bg-black text-white">
       <Navbar />
-
-      {/* ── Hero Section ────────────────────────────────────── */}
-      <section
-        ref={heroRef}
-        className="relative min-h-[85vh] flex flex-col items-center justify-center overflow-hidden px-6"
-      >
-        {/* Ambient background */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(ellipse at 50% 30%, rgba(139,92,246,0.2) 0%, transparent 55%), radial-gradient(ellipse at 80% 70%, rgba(6,182,212,0.12) 0%, transparent 50%), radial-gradient(ellipse at 20% 80%, rgba(236,72,153,0.08) 0%, transparent 45%)",
-          }}
-        />
-
-        <motion.div
-          style={{ opacity: heroOpacity, y: heroY }}
-          className="relative z-10 text-center max-w-4xl"
-        >
-          {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm text-white/60 mb-8"
-            style={{ fontFamily: "var(--font-dm-sans)" }}
-          >
-            <Sparkles className="w-4 h-4 text-purple-400" />
-            Quantum: The Easy Way
-          </motion.div>
-
-          {/* Title */}
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="text-5xl md:text-7xl font-extrabold mb-6 leading-tight"
-            style={{ fontFamily: "var(--font-playfair)" }}
-          >
-            Making Quantum Physics
-            <br />
-            <span className="bg-gradient-to-r from-purple-400 via-cyan-400 to-pink-400 bg-clip-text text-transparent">
-              Accessible to All
-            </span>
-          </motion.h1>
-
-          {/* Subtitle */}
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed"
-            style={{ fontFamily: "var(--font-dm-sans)" }}
-          >
-            An interactive learning platform that transforms the most
-            fascinating — and confusing — branch of physics into beautiful,
-            hands-on experiences powered by AI.
-          </motion.p>
-
-          {/* CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center mt-10"
-          >
-            <Link href="/?open-topics=true">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.97 }}
-                className="px-8 py-3.5 rounded-full bg-purple-500 text-white font-semibold hover:bg-purple-600 transition-colors shadow-lg shadow-purple-500/25 flex items-center gap-2"
-                style={{ fontFamily: "var(--font-dm-sans)" }}
-              >
-                Start Learning
-                <ArrowRight className="w-4 h-4" />
-              </motion.button>
-            </Link>
-
-          </motion.div>
-        </motion.div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-        >
-          <span
-            className="text-xs text-gray-500 tracking-widest uppercase"
-            style={{ fontFamily: "var(--font-dm-sans)" }}
-          >
-            Scroll to explore
-          </span>
-          <motion.div
-            animate={{ y: [0, 6, 0] }}
-            transition={{ duration: 1.5, ease: "easeInOut", repeat: Infinity }}
-          >
-            <ChevronDown className="w-5 h-5 text-gray-500" />
-          </motion.div>
-        </motion.div>
-      </section>
 
       {/* ── Mission Section ─────────────────────────────────── */}
       <section className="relative py-28 px-6">
@@ -585,47 +470,6 @@ export default function AboutPage() {
               </motion.div>
             ))}
           </StaggerContainer>
-        </div>
-      </section>
-
-      {/* ── Open Source / Philosophy ─────────────────────────── */}
-      <section className="relative py-28 px-6 bg-white/[0.02]">
-        <div className="max-w-4xl mx-auto text-center">
-          <ScrollReveal>
-            <Code2 className="w-12 h-12 text-purple-400 mx-auto mb-6" />
-            <h2
-              className="text-3xl md:text-4xl font-bold mb-6"
-              style={{ fontFamily: "var(--font-playfair)" }}
-            >
-              Open, transparent, and{" "}
-              <span className="text-purple-400">community-driven</span>
-            </h2>
-            <p
-              className="text-gray-400 text-lg leading-relaxed max-w-2xl mx-auto mb-8"
-              style={{ fontFamily: "var(--font-dm-sans)" }}
-            >
-              Every line of this platform is open source. We believe that
-              educational tools should be built in the open, improved by the
-              community, and accessible to anyone with a browser. Our code is
-              available on GitHub — feel free to explore, contribute, or fork it
-              for your own learning projects.
-            </p>
-            <a
-              href="https://github.com/iamhim466/qauntum-ai"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.97 }}
-                className="px-8 py-3.5 rounded-full border border-white/20 text-white font-semibold hover:bg-white/5 transition-colors inline-flex items-center gap-2"
-                style={{ fontFamily: "var(--font-dm-sans)" }}
-              >
-                <Code2 className="w-4 h-4" />
-                View on GitHub
-              </motion.button>
-            </a>
-          </ScrollReveal>
         </div>
       </section>
 

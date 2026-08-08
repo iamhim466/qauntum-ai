@@ -33,7 +33,7 @@ export default function ObserverEffectShowcase() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.5;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -63,7 +63,7 @@ export default function ObserverEffectShowcase() {
       const dotMat = new THREE.MeshBasicMaterial({
         color: 0x6366f1,
         transparent: true,
-        opacity: 0.4 + Math.random() * 0.3,
+        opacity: 0.6 + Math.random() * 0.3,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });

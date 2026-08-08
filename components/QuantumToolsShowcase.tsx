@@ -47,7 +47,7 @@ export default function QuantumToolsShowcase() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.5;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -60,7 +60,7 @@ export default function QuantumToolsShowcase() {
     cameraRef.current = camera;
 
     // ── Qubit lines ─────────────────────────────────────────
-    const lineMat = new THREE.LineBasicMaterial({ color: 0x14b8a6, transparent: true, opacity: 0.4 });
+    const lineMat = new THREE.LineBasicMaterial({ color: 0x14b8a6, transparent: true, opacity: 0.6 });
     for (let i = 0; i < QUBIT_COUNT; i++) {
       const y = (i - (QUBIT_COUNT - 1) / 2) * QUBIT_SPACING;
       const pts = [new THREE.Vector3(-5, y, 0), new THREE.Vector3(5, y, 0)];
@@ -90,7 +90,7 @@ export default function QuantumToolsShowcase() {
       const y = (i - (QUBIT_COUNT - 1) / 2) * QUBIT_SPACING;
       const meter = new THREE.Mesh(
         new THREE.SphereGeometry(0.12, 16, 16),
-        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 })
+        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 })
       );
       meter.position.set(4.5, y, 0);
       meter.name = `meter${i}`;

@@ -26,7 +26,7 @@ export default function WaveFunctionShowcase() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.5;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -46,7 +46,7 @@ export default function WaveFunctionShowcase() {
     const waveMat = new THREE.MeshPhysicalMaterial({
       color: 0xa855f7,
       emissive: 0xa855f7,
-      emissiveIntensity: 0.5,
+      emissiveIntensity: 1.0,
       transparent: true,
       opacity: 0.6,
       roughness: 0.3,
@@ -67,7 +67,7 @@ export default function WaveFunctionShowcase() {
     const probMat = new THREE.MeshPhysicalMaterial({
       color: 0xd8b4fe,
       emissive: 0xd8b4fe,
-      emissiveIntensity: 0.8,
+      emissiveIntensity: 1.5,
       transparent: true,
       opacity: 0.4,
       roughness: 0.2,
@@ -84,14 +84,14 @@ export default function WaveFunctionShowcase() {
     const groundGeo = new THREE.PlaneGeometry(8, 5);
     groundGeo.rotateX(-Math.PI / 2);
     const groundMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff, transparent: true, opacity: 0.03, side: THREE.DoubleSide,
+      color: 0xffffff, transparent: true,      opacity: 0.08, side: THREE.DoubleSide,
     });
     scene.add(new THREE.Mesh(groundGeo, groundMat));
 
     // Grid lines
     const gridHelper = new THREE.GridHelper(8, 20, 0x444444, 0x222222);
     gridHelper.material.transparent = true;
-    (gridHelper.material as THREE.Material).opacity = 0.15;
+    (gridHelper.material as THREE.Material).opacity = 0.3;
     scene.add(gridHelper);
 
     // ── Labels ──────────────────────────────────────────────
@@ -119,7 +119,7 @@ export default function WaveFunctionShowcase() {
     scene.add(createLabel("|ψ|² (probability)", 0xd8b4fe, new THREE.Vector3(-3.5, -1.2, 0)));
 
     // ── Axis lines ──────────────────────────────────────────
-    const axisMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.15 });
+    const axisMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 });
     scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(-3.5, -2.5, 0), new THREE.Vector3(3.5, -2.5, 0)
     ]), axisMat));

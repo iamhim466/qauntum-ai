@@ -33,7 +33,7 @@ export default function QuantumTunnelingShowcase() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.5;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -75,7 +75,7 @@ export default function QuantumTunnelingShowcase() {
     scene.add(edges);
 
     // ── Potential energy plateau lines ──────────────────────
-    const plateauMat = new THREE.LineBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.15 });
+    const plateauMat = new THREE.LineBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.4 });
     // Top line
     const topPts = [new THREE.Vector3(-4, 1.5, 0), new THREE.Vector3(-0.2, 1.5, 0)];
     scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(topPts), plateauMat));
@@ -86,7 +86,7 @@ export default function QuantumTunnelingShowcase() {
     scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(barPts), new THREE.LineBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.4 })));
 
     // ── Ground line ─────────────────────────────────────────
-    const groundMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.1 });
+    const groundMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25 });
     scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(-4.5, 0, 0), new THREE.Vector3(4.5, 0, 0)
     ]), groundMat));

@@ -52,7 +52,7 @@ export default function EntanglementShowcase() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.5;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -145,7 +145,7 @@ export default function EntanglementShowcase() {
         new THREE.Path().absarc(0, 0, ORBIT_RADIUS, 0, Math.PI * 2, false)
           .getPoints(128).map((p) => new THREE.Vector3(p.x, 0, p.y))
       ),
-      new THREE.LineBasicMaterial({ color: 0xec4899, transparent: true, opacity: 0.1 })
+      new THREE.LineBasicMaterial({ color: 0xec4899, transparent: true, opacity: 0.3 })
     );
     scene.add(mainOrbit);
 
@@ -155,7 +155,7 @@ export default function EntanglementShowcase() {
           new THREE.Path().absarc(0, s.height, s.orbitRadius, 0, Math.PI * 2, false)
             .getPoints(128).map((p) => new THREE.Vector3(p.x, s.height, p.y))
         ),
-        new THREE.LineBasicMaterial({ color: s.color, transparent: true, opacity: 0.06 })
+        new THREE.LineBasicMaterial({ color: s.color, transparent: true, opacity: 0.2 })
       );
       scene.add(ring);
     });

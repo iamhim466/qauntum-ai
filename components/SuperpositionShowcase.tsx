@@ -45,7 +45,7 @@ export default function SuperpositionShowcase() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.5;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -105,7 +105,7 @@ export default function SuperpositionShowcase() {
       const ringMat = new THREE.LineBasicMaterial({
         color: 0x8855ff,
         transparent: true,
-        opacity: 0.15,
+        opacity: 0.35,
       });
       scene.add(new THREE.Line(ringGeo, ringMat));
     }
@@ -128,7 +128,7 @@ export default function SuperpositionShowcase() {
       const lineMat = new THREE.LineBasicMaterial({
         color: 0x8855ff,
         transparent: true,
-        opacity: 0.1,
+        opacity: 0.25,
       });
       scene.add(new THREE.Line(lineGeo, lineMat));
     }
@@ -142,7 +142,7 @@ export default function SuperpositionShowcase() {
     const zAxisMat = new THREE.LineBasicMaterial({
       color: 0xffffff,
       transparent: true,
-      opacity: 0.2,
+      opacity: 0.4,
     });
     scene.add(new THREE.Line(zAxisGeo, zAxisMat));
 
@@ -199,8 +199,8 @@ export default function SuperpositionShowcase() {
     southPole.position.set(0, -sphereRadius, 0);
     scene.add(southPole);
 
-    // ── Measurement flash ring ─────────────────────────────────
-    const flashRingGeo = new THREE.RingGeometry(0.1, 0.15, 64);
+    // ── Measurement flash ring (big, dramatic) ─────────────────
+    const flashRingGeo = new THREE.RingGeometry(0.3, 0.5, 64);
     const flashRingMat = new THREE.MeshBasicMaterial({
       color: 0xffffff,
       transparent: true,
@@ -212,6 +212,26 @@ export default function SuperpositionShowcase() {
     const flashRing = new THREE.Mesh(flashRingGeo, flashRingMat);
     flashRing.name = "flash";
     scene.add(flashRing);
+
+    // ── Result label ("|0⟩" or "|1⟩") ─────────────────────────
+    const labelCanvas = document.createElement("canvas");
+    labelCanvas.width = 256;
+    labelCanvas.height = 128;
+    const labelCtx = labelCanvas.getContext("2d")!;
+    labelCtx.clearRect(0, 0, 256, 128);
+    labelCtx.font = "bold 64px sans-serif";
+    labelCtx.textAlign = "center";
+    labelCtx.textBaseline = "middle";
+    labelCtx.fillStyle = "rgba(255,255,255,0.9)";
+    labelCtx.fillText("", 128, 64);
+    const labelTex = new THREE.CanvasTexture(labelCanvas);
+    const labelMat = new THREE.SpriteMaterial({
+      map: labelTex, transparent: true, opacity: 0, depthWrite: false,
+    });
+    const resultLabel = new THREE.Sprite(labelMat);
+    resultLabel.scale.set(2, 1, 1);
+    resultLabel.name = "resultLabel";
+    scene.add(resultLabel);
 
     // ── Ambient + Point lights ─────────────────────────────────
     const ambientLight = new THREE.AmbientLight(0x404060, 0.5);
@@ -277,6 +297,13 @@ export default function SuperpositionShowcase() {
       collapsedValueRef.current = Math.random() < 0.5 ? 0 : 1;
       // Collapse to |0⟩ (south, theta=PI) or |1⟩ (north, theta=0)
       targetThetaRef.current = collapsedValueRef.current === 1 ? 0.05 : Math.PI - 0.05;
+      // Trigger flash burst immediately
+      const flashObj = sceneRef.current?.getObjectByName("flash") as THREE.Mesh | undefined;
+      if (flashObj) {
+        const fMat = flashObj.material as THREE.MeshBasicMaterial;
+        fMat.opacity = 1;
+        fMat.color.set(collapsedValueRef.current === 1 ? 0xff4466 : 0x4488ff);
+      }
     };
 
     renderer.domElement.addEventListener("mousedown", onMouseDown);
@@ -437,19 +464,45 @@ export default function SuperpositionShowcase() {
         // Smooth interpolation
         thetaRef.current += (target - theta) * 0.06;
 
-        // Flash ring
-        if (flash) {
-          const fMat = flash.material as THREE.MeshBasicMaterial;
-          fMat.opacity = Math.min(1, fMat.opacity + 0.05);
-          const flashScale = 1 + (1 - fMat.opacity) * 4;
-          flash.scale.setScalar(flashScale);
-          flash.lookAt(camera.position);
-        }
-
         const currentTheta = thetaRef.current;
         const x = sphereR * Math.sin(currentTheta) * Math.cos(phiRef.current);
         const y = sphereR * Math.cos(currentTheta);
         const z = sphereR * Math.sin(currentTheta) * Math.sin(phiRef.current);
+
+        // Flash ring — positioned at qubit, expands and fades
+        if (flash) {
+          flash.position.set(x, y, z);
+          const fMat = flash.material as THREE.MeshBasicMaterial;
+          fMat.opacity = Math.max(0, fMat.opacity - 0.03);
+          const flashScale = 1 + (1 - fMat.opacity) * 6;
+          flash.scale.setScalar(flashScale);
+          flash.lookAt(camera.position);
+          // Color the flash to match the collapse result
+          fMat.color.set(collapsedValueRef.current === 1 ? 0xff4466 : 0x4488ff);
+        }
+
+        // Show result label
+        const resultLabel = scene.getObjectByName("resultLabel") as THREE.Sprite;
+        if (resultLabel) {
+          const labelText = collapsedValueRef.current === 1 ? "|1⟩" : "|0⟩";
+          const labelColor = collapsedValueRef.current === 1 ? "#ff4466" : "#4488ff";
+          // Update canvas text
+          const labelMap = (resultLabel.material as THREE.SpriteMaterial).map;
+          if (labelMap && labelMap.image instanceof HTMLCanvasElement) {
+            const lCtx = labelMap.image.getContext("2d");
+            if (lCtx) {
+              lCtx.clearRect(0, 0, 256, 128);
+              lCtx.font = "bold 72px sans-serif";
+              lCtx.textAlign = "center";
+              lCtx.textBaseline = "middle";
+              lCtx.fillStyle = labelColor;
+              lCtx.fillText(labelText, 128, 64);
+              labelMap.needsUpdate = true;
+            }
+          }
+          (resultLabel.material as THREE.SpriteMaterial).opacity = Math.min(1, (resultLabel.material as THREE.SpriteMaterial).opacity + 0.04);
+          resultLabel.position.set(x, y + 0.6, z);
+        }
 
         if (qubit) {
           qubit.position.set(x, y, z);
@@ -457,11 +510,12 @@ export default function SuperpositionShowcase() {
           (qubit.material as THREE.MeshPhysicalMaterial).emissive.set(
             collapsedValueRef.current === 1 ? 0xff4466 : 0x4488ff
           );
-          (qubit.material as THREE.MeshPhysicalMaterial).emissiveIntensity = 3;
+          (qubit.material as THREE.MeshPhysicalMaterial).emissiveIntensity = 4;
+          qubit.scale.setScalar(1.5);
         }
         if (glow) {
           glow.position.copy(qubit.position);
-          glow.scale.setScalar(2);
+          glow.scale.setScalar(2.5);
           (glow.material as THREE.SpriteMaterial).color.set(
             collapsedValueRef.current === 1 ? 0xff4466 : 0x4488ff
           );
@@ -471,35 +525,56 @@ export default function SuperpositionShowcase() {
         if (Math.abs(thetaRef.current - target) < 0.05) {
           phaseRef.current = "collapsed";
           collapseStartTimeRef.current = clockRef.current.getElapsedTime();
+          // Trigger flash burst at the moment of collapse
           if (flash) {
-            (flash.material as THREE.MeshBasicMaterial).opacity = 0;
+            const fMat = flash.material as THREE.MeshBasicMaterial;
+            fMat.opacity = 1;
+            fMat.color.set(collapsedValueRef.current === 1 ? 0xff4466 : 0x4488ff);
           }
         }
       } else if (phase === "collapsed") {
-        // Hold at pole, then auto-reset after 2s
+        // Hold at pole, then auto-reset after 2.5s
+        const target = targetThetaRef.current;
         if (qubit) {
           const bob = Math.sin(time * 2) * 0.03;
-          const target = targetThetaRef.current;
-          const x =
-            sphereR * Math.sin(target) * Math.cos(phiRef.current);
+          const x = sphereR * Math.sin(target) * Math.cos(phiRef.current);
           const y = sphereR * Math.cos(target) + bob;
-          const z =
-            sphereR * Math.sin(target) * Math.sin(phiRef.current);
+          const z = sphereR * Math.sin(target) * Math.sin(phiRef.current);
           qubit.position.set(x, y, z);
 
-          // Glow color at pole
+          // Strong colored glow at pole
           const isNorth = collapsedValueRef.current === 1;
           (qubit.material as THREE.MeshPhysicalMaterial).emissive.set(
             isNorth ? 0xff4466 : 0x4488ff
           );
           (qubit.material as THREE.MeshPhysicalMaterial).emissiveIntensity =
-            2 + Math.sin(time * 3) * 0.5;
+            3 + Math.sin(time * 3) * 0.5;
+          qubit.scale.setScalar(1.3 + Math.sin(time * 2) * 0.1);
         }
         if (glow) {
           glow.position.copy(qubit.position);
+          glow.scale.setScalar(2 + Math.sin(time * 2) * 0.2);
           (glow.material as THREE.SpriteMaterial).color.set(
             collapsedValueRef.current === 1 ? 0xff4466 : 0x4488ff
           );
+        }
+
+        // Flash ring continues to expand and fade
+        if (flash) {
+          const fMat = flash.material as THREE.MeshBasicMaterial;
+          fMat.opacity = Math.max(0, fMat.opacity - 0.02);
+          flash.scale.multiplyScalar(1.02);
+        }
+
+        // Keep result label visible
+        const resultLabel = scene.getObjectByName("resultLabel") as THREE.Sprite;
+        if (resultLabel) {
+          (resultLabel.material as THREE.SpriteMaterial).opacity =
+            Math.max(0, 1 - (time - collapseStartTimeRef.current) * 0.3);
+          const lx = sphereR * Math.sin(target) * Math.cos(phiRef.current);
+          const ly = sphereR * Math.cos(target) + 0.6;
+          const lz = sphereR * Math.sin(target) * Math.sin(phiRef.current);
+          resultLabel.position.set(lx, ly, lz);
         }
 
         // Auto-reset after 2.5 seconds
@@ -510,6 +585,15 @@ export default function SuperpositionShowcase() {
       } else if (phase === "resetting") {
         // Transition back to superposition
         thetaRef.current += (targetThetaRef.current - thetaRef.current) * 0.03;
+
+        // Clean up flash and label
+        if (flash) {
+          (flash.material as THREE.MeshBasicMaterial).opacity = 0;
+        }
+        const resultLabel = scene.getObjectByName("resultLabel") as THREE.Sprite;
+        if (resultLabel) {
+          (resultLabel.material as THREE.SpriteMaterial).opacity = 0;
+        }
 
         const theta = thetaRef.current;
         const x = sphereR * Math.sin(theta) * Math.cos(phiRef.current);

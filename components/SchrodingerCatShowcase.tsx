@@ -30,7 +30,7 @@ export default function SchrodingerCatShowcase() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.5;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -192,7 +192,7 @@ export default function SchrodingerCatShowcase() {
 
     // ── Glow box outline ────────────────────────────────────
     const boxEdgeMat = new THREE.LineBasicMaterial({
-      color: 0xef4444, transparent: true, opacity: 0.15,
+      color: 0xef4444, transparent: true, opacity: 0.35,
     });
     const boxEdgeGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(boxSize, boxSize, boxSize));
     const boxEdges = new THREE.LineSegments(boxEdgeGeo, boxEdgeMat);
